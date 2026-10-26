@@ -44,6 +44,7 @@ export default function AssetAssignmentDialog({ open, asset, saving, error, onCl
               noOptionsText={employeesQuery.isError ? 'Unable to load employees' : searchTerm ? 'No matching active employees' : 'No active employees found'}
               getOptionLabel={(employee) => `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, state) => options.filter((employee) => `${employee.fullName} ${employee.employeeId ?? ''} ${employee.department?.departmentName ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 5)}
               renderInput={(params) => <TextField {...params} label="Employee" error={Boolean(errors.employee)} helperText={errors.employee?.message ?? 'Search by employee name or ID'} />}
             />} />
             <Controller name="condition" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="assignment-condition-label">Condition at assignment</InputLabel><Select {...field} labelId="assignment-condition-label" label="Condition at assignment">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />

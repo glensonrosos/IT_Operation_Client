@@ -87,7 +87,7 @@ export default function TicketCreateDialog({ open, saving, error, canLinkAssets,
   const employees = employeesQuery.data ?? [];
 
   return (
-    <Dialog open={open} onClose={(_, reason) => { if (reason === 'backdropClick' || reason === 'escapeKeyDown') return; onClose(); }} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <form onSubmit={handleSubmit((values) => onSubmit({
         requester: values.requester,
         title: values.title,

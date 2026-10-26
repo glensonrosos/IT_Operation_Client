@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Tooltip, FormHelperText, InputLabel, MenuItem, Select, Stack, TextField, LinearProgress } from '@mui/material';
+import { Autocomplete, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Tooltip, FormHelperText, InputLabel, MenuItem, Select, Stack, TextField, LinearProgress } from '@mui/material';
 
 const statuses = ['AVAILABLE', 'UNDER_REPAIR', 'DAMAGED', 'LOST', 'RETIRED', 'DISPOSED'];
 const conditions = ['NEW', 'EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED', 'UNUSABLE'];
@@ -14,6 +14,7 @@ export default function AssetFormDialog({ open, asset, types, employees, saving,
   const [images, setImages] = useState([]);
   const selectedType = watch('assetType');
   const activeTypes = types.filter((type) => type.isActive);
+  const activeEmployees = (employees ?? []).filter((employee) => employee.status === 'ACTIVE');
   const assetType = types.find((type) => type.id === selectedType);
   const hasCustodian = Boolean(asset?.currentCustodian);
 
@@ -60,7 +61,7 @@ export default function AssetFormDialog({ open, asset, types, employees, saving,
               <TextField label="Location" fullWidth {...register('location')} />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Controller name="assignTo" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="asset-custodian-label">Assign to employee</InputLabel><Select {...field} disabled={Boolean(asset?.currentCustodian)} labelId="asset-custodian-label" label="Assign to employee"><MenuItem value="">Unassigned</MenuItem>{(employees ?? []).filter((employee) => employee.status === 'ACTIVE').map((employee) => <MenuItem key={employee.id} value={employee.id}>{employee.fullName} - {employee.department?.departmentName ?? 'No department'}</MenuItem>)}</Select></FormControl>} />
+              <Controller name="assignTo" control={control} render={({ field }) => <Autocomplete fullWidth options={activeEmployees} value={activeEmployees.find((employee) => employee.id === field.value) ?? null} disabled={Boolean(asset)} getOptionLabel={(employee) => `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}`} isOptionEqualToValue={(option, value) => option.id === value.id} filterOptions={(options, state) => options.filter((employee) => `${employee.fullName} ${employee.department?.departmentName ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 5)} onChange={(_, employee) => field.onChange(employee?.id ?? '')} renderInput={(params) => <TextField {...params} label="Assign to employee" placeholder="Search employee" />} renderOption={(props, employee) => <li {...props} key={employee.id}>{employee.fullName} - {employee.department?.departmentName ?? 'No department'}</li>} />} />
               {!asset && <TextField fullWidth label="Accessories" helperText="Separate accessories with commas" {...register('accessories')} />}
               {asset && <Controller name="status" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="asset-status-label">Status</InputLabel><Select {...field} labelId="asset-status-label" label="Status">{statuses.map((status) => <MenuItem key={status} value={status} disabled={['ASSIGNED', 'IN_USE', 'BORROWED'].includes(status)}>{status.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl>} />}
               <Controller name="condition" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="asset-condition-label">Condition</InputLabel><Select {...field} labelId="asset-condition-label" label="Condition">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />
@@ -71,7 +72,7 @@ export default function AssetFormDialog({ open, asset, types, employees, saving,
             <TextField label="Notes" multiline minRows={2} {...register('notes')} />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? (images.length ? 'Uploading images…' : 'Saving…') : asset ? 'Save changes' : 'Register asset'}</Button></DialogActions>
+        <DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? (images.length ? 'Uploading imagesï¿½' : 'Savingï¿½') : asset ? 'Save changes' : 'Register asset'}</Button></DialogActions>
       </form>
     </Dialog>
   );

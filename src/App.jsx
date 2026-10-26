@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -24,25 +24,10 @@ const BorrowingsPage = lazy(() => import('./features/borrowings/BorrowingsPage.j
 const BorrowingDetailPage = lazy(() => import('./features/borrowings/BorrowingDetailPage.jsx'));
 const MaintenancePage = lazy(() => import('./features/assets/MaintenancePage.jsx'));
 const WarrantiesPage = lazy(() => import('./features/assets/WarrantiesPage.jsx'));
-const ReportsPage = lazy(() => import('./features/reports/ReportsPage.jsx'));
-const AuditLogsPage = lazy(() => import('./features/audit/AuditLogsPage.jsx'));
 const UsersPage = lazy(() => import('./features/admin/UsersPage.jsx'));
 const SettingsPage = lazy(() => import('./features/admin/SettingsPage.jsx'));
-const KnowledgePage = lazy(() => import('./features/knowledge/KnowledgePage.jsx'));
-const KnowledgeDetailPage = lazy(() => import('./features/knowledge/KnowledgeDetailPage.jsx'));
 
 export default function App() {
-  useEffect(() => {
-    const preventBackdropClose = (event) => {
-      if (event.target instanceof Element && event.target.classList.contains('MuiBackdrop-root')) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    document.addEventListener('click', preventBackdropClose, true);
-    return () => document.removeEventListener('click', preventBackdropClose, true);
-  }, []);
-
   return (
     <AuthProvider>
       <Suspense fallback={<Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><CircularProgress /></Box>}>
@@ -64,12 +49,8 @@ export default function App() {
             <Route path="/borrowings/:id" element={<RequirePermission permissions={['borrowing.view', 'borrowing.view.assigned']}><BorrowingDetailPage /></RequirePermission>} />
             <Route path="/maintenance" element={<RequirePermission permissions={['maintenance.view']}><MaintenancePage /></RequirePermission>} />
             <Route path="/warranties" element={<RequirePermission permissions={['maintenance.view']}><WarrantiesPage /></RequirePermission>} />
-            <Route path="/reports" element={<RequirePermission permissions={['reports.view']}><ReportsPage /></RequirePermission>} />
-            <Route path="/audit-logs" element={<RequirePermission permissions={['audit.view']}><AuditLogsPage /></RequirePermission>} />
             <Route path="/it-accounts" element={<RequirePermission permissions={['users.view']}><UsersPage /></RequirePermission>} />
             <Route path="/settings" element={<RequirePermission permissions={['settings.view']}><SettingsPage /></RequirePermission>} />
-            <Route path="/knowledge" element={<RequirePermission permissions={['knowledge.view']}><KnowledgePage /></RequirePermission>} />
-            <Route path="/knowledge/:id" element={<RequirePermission permissions={['knowledge.view']}><KnowledgeDetailPage /></RequirePermission>} />
             <Route path="/tickets" element={<RequirePermission permissions={['tickets.view', 'tickets.view.assigned']}><TicketsPage /></RequirePermission>} />
             <Route path="/tickets/:id" element={<RequirePermission permissions={['tickets.view', 'tickets.view.assigned']}><TicketDetailPage /></RequirePermission>} />
             <Route path="/ticket-settings" element={<RequirePermission permissions={['ticketCategories.manage', 'sla.manage']}><TicketSettingsPage /></RequirePermission>} />

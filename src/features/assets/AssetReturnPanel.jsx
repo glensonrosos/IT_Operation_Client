@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from '@mui/material';
 import { apiClient } from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { can } from '../../utils/permissions.js';
@@ -14,6 +14,7 @@ export default function AssetReturnPanel({ asset }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [notice, setNotice] = useState({ open: false, message: '', severity: 'success' });
@@ -64,7 +65,23 @@ export default function AssetReturnPanel({ asset }) {
       {asset.pendingTransfer && <Alert severity="info">Complete or cancel the pending transfer before returning this asset.</Alert>}
       {asset.pendingReturn && can(user, 'assets.return') && <Stack direction="row" alignItems="center" spacing={2}><Alert severity="warning" sx={{ flex: 1 }}>A return was interrupted and needs reconciliation.</Alert><Button variant="contained" disabled={resumeMutation.isPending} onClick={() => resumeMutation.mutate()}>{resumeMutation.isPending ? 'Resuming…' : 'Resume return'}</Button></Stack>}
       {returnsQuery.isError && <Alert severity="error">{errorMessage(returnsQuery.error)}</Alert>}
-      {returnsQuery.isPending ? <Typography color="text.secondary">Loading return history…</Typography> : (returnsQuery.data ?? []).length === 0 ? <Typography color="text.secondary">No return records.</Typography> : <><Table size="small"><TableHead><TableRow><TableCell>Return</TableCell><TableCell>Employee</TableCell><TableCell>Date</TableCell><TableCell>Result</TableCell><TableCell>Condition</TableCell><TableCell>Inspection</TableCell><TableCell>Missing accessories</TableCell></TableRow></TableHead><TableBody>{returnsQuery.data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record) => <TableRow key={record.id}><TableCell>{record.returnNumber}</TableCell><TableCell>{record.employee?.fullName}</TableCell><TableCell>{new Date(record.returnDate).toLocaleString()}</TableCell><TableCell>{(record.result ?? 'UNKNOWN').replaceAll('_', ' ')}</TableCell><TableCell>{record.conditionAfter}</TableCell><TableCell>{(record.inspectionResult ?? 'UNKNOWN').replaceAll('_', ' ')}</TableCell><TableCell>{record.missingAccessories?.join(', ') || '—'}</TableCell></TableRow>)}</TableBody></Table><TablePagination component="div" count={(returnsQuery.data ?? []).length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[5, 10, 25]} /></>}
+      {returnsQuery.isPending ? <Typography color="text.secondary">Loading return history…</Typography> : (returnsQuery.data ?? []).length === 0 ? <Typography color="text.secondary">No return records.</Typography> : <><Table size="small"><TableHead><TableRow><TableCell>Return</TableCell><TableCell>Employee</TableCell><TableCell>Date</TableCell><TableCell>Result</TableCell><TableCell>Condition</TableCell><TableCell>Inspection</TableCell><TableCell>Missing accessories</TableCell></TableRow></TableHead><TableBody>{returnsQuery.data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record) => <TableRow key={record.id}><TableCell><Button size="small" onClick={() => setSelectedReturn(record)}>{record.returnNumber}</Button></TableCell><TableCell>{record.employee?.fullName}</TableCell><TableCell>{new Date(record.returnDate).toLocaleString()}</TableCell><TableCell>{(record.result ?? 'UNKNOWN').replaceAll('_', ' ')}</TableCell><TableCell>{record.conditionAfter}</TableCell><TableCell>{(record.inspectionResult ?? 'UNKNOWN').replaceAll('_', ' ')}</TableCell><TableCell>{record.missingAccessories?.join(', ') || '—'}</TableCell></TableRow>)}</TableBody></Table><TablePagination component="div" count={(returnsQuery.data ?? []).length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[5, 10, 25]} /></>}
+      <Dialog open={Boolean(selectedReturn)} onClose={() => setSelectedReturn(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Return {selectedReturn?.returnNumber}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1}>
+            <Typography><strong>Employee:</strong> {selectedReturn?.employee?.fullName || '—'}</Typography>
+            <Typography><strong>Return date:</strong> {selectedReturn?.returnDate ? new Date(selectedReturn.returnDate).toLocaleString() : '—'}</Typography>
+            <Typography><strong>Result:</strong> {(selectedReturn?.result ?? 'UNKNOWN').replaceAll('_', ' ')}</Typography>
+            <Typography><strong>Condition after:</strong> {selectedReturn?.conditionAfter || '—'}</Typography>
+            <Typography><strong>Inspection:</strong> {(selectedReturn?.inspectionResult ?? 'UNKNOWN').replaceAll('_', ' ')}</Typography>
+            <Typography><strong>Missing accessories:</strong> {selectedReturn?.missingAccessories?.join(', ') || '—'}</Typography>
+            <Typography><strong>Damage or repair details:</strong> {selectedReturn?.damageDescription || '—'}</Typography>
+            <Typography><strong>Return notes:</strong> {selectedReturn?.returnNotes || '—'}</Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setSelectedReturn(null)}>Close</Button></DialogActions>
+      </Dialog>
       <AssetReturnDialog open={dialogOpen} asset={asset} saving={returnMutation.isPending} error={returnMutation.error ? errorMessage(returnMutation.error) : ''} onClose={() => setDialogOpen(false)} onSubmit={(values) => returnMutation.mutate(values)} />
       {notice.open && <Alert severity={notice.severity} onClose={() => setNotice((current) => ({ ...current, open: false }))}>{notice.message}</Alert>}
     </Stack>

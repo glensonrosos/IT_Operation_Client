@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Add, ArchiveOutlined, EditOutlined, PersonAddAlt1, RestoreOutlined } from '@mui/icons-material';
-import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Popper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
 import DirectoryNavigation from '../../components/DirectoryNavigation.jsx';
@@ -29,6 +29,30 @@ function statusColor(status) {
 
 function canArchiveAsset(asset) {
   return ['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status) && !asset.currentCustodian && !asset.currentBorrower && !asset.currentBorrowing && !asset.currentMaintenance && !asset.pendingTransfer && !asset.pendingReturn;
+}
+
+function AssetIdPreview({ asset, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const imageQuery = useQuery({
+    queryKey: ['asset-images', asset.id],
+    enabled: hovered,
+    queryFn: async () => (await apiClient.get(`/assets/${asset.id}/images`)).data.data.images
+  });
+  const image = imageQuery.data?.[0];
+
+  return (
+    <>
+      <Button size="small" onClick={onClick} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }}>
+        {asset.assetId}
+      </Button>
+      {image && <Popper open={hovered} anchorEl={anchorEl} placement="right-start" sx={{ zIndex: 1500, pointerEvents: 'none' }}>
+        <Box sx={{ p: 1, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, boxShadow: 6 }}>
+          <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt={`${asset.assetId} preview`} sx={{ display: 'block', width: 420, height: 420, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 1 }} />
+        </Box>
+      </Popper>}
+    </>
+  );
 }
 
 export default function AssetsPage() {
@@ -128,7 +152,7 @@ export default function AssetsPage() {
               <TableCell>Condition</TableCell>
             </TableRow></TableHead><TableBody>
               {assetsQuery.isPending ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={7} align="center" sx={{ py: 5, color: 'text.secondary' }}>No assets match these filters.</TableCell></TableRow> : rows.map((asset) => <TableRow hover key={asset.id}>
-                <TableCell><Button size="small" onClick={() => navigate(`/assets/${asset.id}`)}>{asset.assetId}</Button></TableCell>
+                <TableCell><AssetIdPreview asset={asset} onClick={() => navigate(`/assets/${asset.id}`)} /></TableCell>
                 <TableCell><Stack><Typography fontWeight={600}>{asset.assetName}</Typography><Typography variant="body2" color="text.secondary">{asset.brand} {asset.model}</Typography></Stack></TableCell>
                 <TableCell>{asset.serialNumber || asset.serviceTag || '—'}</TableCell>
                 <TableCell>{asset.currentCustodian?.fullName ?? asset.currentBorrower?.fullName ?? '—'}</TableCell>
