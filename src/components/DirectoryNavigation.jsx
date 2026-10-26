@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ExpandMore, Menu as MenuIcon } from '@mui/icons-material';
-import { AppBar, Avatar, Badge, Box, Button, Divider, IconButton, Menu, MenuItem, Stack, Toolbar, Typography } from '@mui/material';
+import { AppBar, Avatar, Badge, Box, Button, ClickAwayListener, Divider, IconButton, Menu, MenuItem, Stack, Toolbar, Typography } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import { apiClient } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -65,7 +65,8 @@ export default function DirectoryNavigation() {
   const closeMenus = () => { setMobileAnchor(null); setMoreAnchor(null); setUserAnchor(null); };
 
   return (
-    <AppBar position="sticky" top={0} color="inherit" elevation={0} sx={{ zIndex: (theme) => theme.zIndex.appBar, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+    <ClickAwayListener onClickAway={closeMenus}>
+      <AppBar position="sticky" top={0} color="inherit" elevation={0} sx={{ zIndex: (theme) => theme.zIndex.appBar, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
       <Toolbar sx={{ minHeight: { xs: 64, md: 76 }, gap: { xs: 1, md: 2 }, px: { xs: 2, md: 4 } }}>
         <IconButton onClick={(event) => setMobileAnchor(event.currentTarget)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }} aria-label="Open navigation"><MenuIcon /></IconButton>
         <Box component={Link} to="/" onClick={closeMenus} sx={{ minWidth: 190, flexGrow: { xs: 1, lg: 0 }, color: 'text.primary', textDecoration: 'none' }}>
@@ -81,9 +82,10 @@ export default function DirectoryNavigation() {
           <Button onClick={(event) => setUserAnchor(event.currentTarget)} sx={{ minWidth: 0, p: 0.5, borderRadius: 2, color: 'text.primary', textTransform: 'none' }} aria-label="Open account menu" aria-haspopup="menu" aria-expanded={Boolean(userAnchor)}><Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 14 }}>{user?.firstName?.[0]}{user?.lastName?.[0]}</Avatar><Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 100, ml: 1, textAlign: 'left' }}><Typography variant="body2" fontWeight={700} noWrap>{user?.firstName} {user?.lastName}</Typography><Typography variant="caption" color="text.secondary" noWrap>{user?.role?.name}</Typography></Box><ExpandMore sx={{ display: { xs: 'none', sm: 'block' }, ml: 0.5 }} /></Button>
         </Stack>
       </Toolbar>
-      <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={closeMenus} MenuListProps={{ 'aria-label': 'Administration navigation' }}>{secondary.map(([, path, label]) => <MenuItem key={path} component={Link} to={path} selected={active(path)} onClick={closeMenus}>{label}</MenuItem>)}</Menu>
-      <Menu anchorEl={userAnchor} open={Boolean(userAnchor)} onClose={closeMenus} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} MenuListProps={{ 'aria-label': 'Account menu' }}><MenuItem component={Link} to="/change-password" onClick={closeMenus}>Change password</MenuItem><MenuItem onClick={() => { closeMenus(); logout().catch(() => {}); }}>Sign out</MenuItem></Menu>
-      <Menu anchorEl={mobileAnchor} open={Boolean(mobileAnchor)} onClose={closeMenus} sx={{ display: { lg: 'none' } }} MenuListProps={{ 'aria-label': 'Application navigation' }}>{[...primary.map(([, , path, label]) => [path, label]), ...secondary.map(([, path, label]) => [path, label])].map(([path, label]) => <MenuItem key={path} component={Link} to={path} selected={active(path)} onClick={closeMenus}>{label}</MenuItem>)}</Menu>
-    </AppBar>
+      <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={closeMenus} MenuListProps={{ 'aria-label': 'Administration navigation', onMouseLeave: closeMenus }}>{secondary.map(([, path, label]) => <MenuItem key={path} component={Link} to={path} selected={active(path)} onClick={closeMenus}>{label}</MenuItem>)}</Menu>
+      <Menu anchorEl={userAnchor} open={Boolean(userAnchor)} onClose={closeMenus} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} MenuListProps={{ 'aria-label': 'Account menu', onMouseLeave: closeMenus }}><MenuItem component={Link} to="/change-password" onClick={closeMenus}>Change password</MenuItem><MenuItem onClick={() => { closeMenus(); logout().catch(() => {}); }}>Sign out</MenuItem></Menu>
+      <Menu anchorEl={mobileAnchor} open={Boolean(mobileAnchor)} onClose={closeMenus} sx={{ display: { lg: 'none' } }} MenuListProps={{ 'aria-label': 'Application navigation', onMouseLeave: closeMenus }}>{[...primary.map(([, , path, label]) => [path, label]), ...secondary.map(([, path, label]) => [path, label])].map(([path, label]) => <MenuItem key={path} component={Link} to={path} selected={active(path)} onClick={closeMenus}>{label}</MenuItem>)}</Menu>
+      </AppBar>
+    </ClickAwayListener>
   );
 }
