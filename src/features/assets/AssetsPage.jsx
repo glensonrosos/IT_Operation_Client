@@ -149,16 +149,17 @@ export default function AssetsPage() {
               <TableCell><TableSortLabel active={sortBy === 'assetName'} direction={sortBy === 'assetName' ? sortOrder : 'asc'} onClick={() => handleSort('assetName')}>Asset</TableSortLabel></TableCell>
               <TableCell>Serial / Service tag</TableCell><TableCell>Custodian / Borrower</TableCell><TableCell>Department</TableCell>
               <TableCell><TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortOrder : 'asc'} onClick={() => handleSort('status')}>Status</TableSortLabel></TableCell>
-              <TableCell>Condition</TableCell>
+              <TableCell>Condition</TableCell><TableCell align="right">Actions</TableCell>
             </TableRow></TableHead><TableBody>
-              {assetsQuery.isPending ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={7} align="center" sx={{ py: 5, color: 'text.secondary' }}>No assets match these filters.</TableCell></TableRow> : rows.map((asset) => <TableRow hover key={asset.id}>
+              {assetsQuery.isPending ? <TableRow><TableCell colSpan={8} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>No assets match these filters.</TableCell></TableRow> : rows.map((asset) => <TableRow hover key={asset.id}>
                 <TableCell><AssetIdPreview asset={asset} onClick={() => navigate(`/assets/${asset.id}`)} /></TableCell>
                 <TableCell><Stack><Typography fontWeight={600}>{asset.assetName}</Typography><Typography variant="body2" color="text.secondary">{asset.brand} {asset.model}</Typography></Stack></TableCell>
                 <TableCell>{asset.serialNumber || asset.serviceTag || '—'}</TableCell>
                 <TableCell>{asset.currentCustodian?.fullName ?? asset.currentBorrower?.fullName ?? '—'}</TableCell>
-                <TableCell>{asset.currentCustodian || asset.currentBorrower ? (asset.department?.departmentName ?? '—') : ''}</TableCell>
+                <TableCell>{!asset.currentCustodian && !asset.currentBorrower && asset.status === 'AVAILABLE' ? 'IT' : (asset.department?.departmentName ?? '—')}</TableCell>
                 <TableCell><Chip size="small" label={asset.isArchived ? 'ARCHIVED' : (asset.status ?? 'UNKNOWN').replaceAll('_', ' ')} color={asset.isArchived ? 'default' : statusColor(asset.status)} /></TableCell>
                 <TableCell>{asset.condition}</TableCell>
+                <TableCell align="right">{canArchive && (asset.isArchived ? <Button size="small" startIcon={<RestoreOutlined />} onClick={() => archiveMutation.mutate({ asset, restore: true })}>Restore</Button> : canArchiveAsset(asset) && <Button size="small" color="warning" startIcon={<ArchiveOutlined />} onClick={() => setConfirmArchive(asset)}>Archive</Button>)}</TableCell>
 
               </TableRow>)}
             </TableBody></Table>

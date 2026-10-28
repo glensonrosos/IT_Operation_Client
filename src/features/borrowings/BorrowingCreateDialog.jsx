@@ -91,6 +91,7 @@ export default function BorrowingCreateDialog({ open, saving, error, onClose, on
               noOptionsText={employeesQuery.isError ? 'Unable to load employees' : search ? 'No matching active employees' : 'No active employees found'}
               getOptionLabel={(employee) => `${employee.fullName} - ${employee.department?.departmentName ?? employee.departmentName ?? 'No department'}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, state) => options.filter((employee) => `${employee.fullName} ${employee.employeeId ?? ''} ${employee.department?.departmentName ?? employee.departmentName ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 10)}
               renderInput={(params) => <TextField {...params} label="Borrower" error={Boolean(errors.borrower)} helperText={errors.borrower?.message ?? 'Search by employee name or ID'} />}
             />} />
             {selectedBorrower && <Controller name="assets" control={control} rules={{ validate: (values) => values.length > 0 || 'Select at least one available borrowable asset' }} render={({ field }) => <Autocomplete
@@ -101,6 +102,7 @@ export default function BorrowingCreateDialog({ open, saving, error, onClose, on
               onChange={(_, selected) => field.onChange(selected)}
               getOptionLabel={(asset) => `${asset.assetId} · ${asset.assetName} (${asset.condition})`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, state) => options.filter((asset) => `${asset.assetId} ${asset.assetName} ${asset.brand ?? ''} ${asset.model ?? ''} ${asset.condition ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 5)}
               renderOption={(props, asset) => <AssetOption key={asset.id} optionProps={props} asset={asset} />}
               renderInput={(params) => <TextField {...params} label="Equipment" error={Boolean(errors.assets)} helperText={errors.assets?.message ?? 'Only assets marked borrowable and currently available appear here.'} />}
             />} />}

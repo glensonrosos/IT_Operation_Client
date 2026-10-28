@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AttachFile, CloudDownload, EditOutlined, PersonAddAlt1 } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, InputLabel, MenuItem, Paper, Popper, Select, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { Link, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { apiClient } from '../../api/client.js';
@@ -43,6 +43,30 @@ function statusColor(status) {
   if (status === 'CANCELLED') return 'error';
   if (status === 'DUPLICATED') return 'default';
   return 'default';
+}
+
+function RelatedAssetLink({ asset }) {
+  const [hovered, setHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const imageQuery = useQuery({
+    queryKey: ['ticket-related-asset-image', asset._id],
+    enabled: hovered,
+    queryFn: async () => (await apiClient.get(`/assets/${asset._id}/images`)).data.data.images
+  });
+  const image = imageQuery.data?.[0];
+
+  return (
+    <>
+      <Button component={Link} to={`/assets/${asset._id}`} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }}>
+        {asset.assetId} · {asset.assetName}
+      </Button>
+      {image && <Popper open={hovered} anchorEl={anchorEl} placement="right-start" sx={{ zIndex: 1500, pointerEvents: 'none' }}>
+        <Box sx={{ p: 0.75, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1.5, boxShadow: 6 }}>
+          <Box component="img" src={`/api/assets/${asset._id}/images/${image._id ?? image.id}`} alt={`${asset.assetId} preview`} sx={{ display: 'block', width: 420, height: 420, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 1 }} />
+        </Box>
+      </Popper>}
+    </>
+  );
 }
 
 function AttachmentPreview({ ticketId, attachment, onDownload, onPreview }) {
@@ -303,7 +327,7 @@ export default function TicketDetailPage() {
                 </Stack>
                 <Paper variant="outlined" sx={{ p: 2.5 }}>
                   <Typography variant="h6" fontWeight={700} gutterBottom>Related assets</Typography>
-                  {ticket.assetReferences?.length ? <Stack direction="row" spacing={1} flexWrap="wrap">{ticket.assetReferences.map((asset) => <Button key={asset._id} component={Link} to={`/assets/${asset._id}`}>{asset.assetId} · {asset.assetName}</Button>)}</Stack> : <Typography color="text.secondary">No related assets linked.</Typography>}
+                  {ticket.assetReferences?.length ? <Stack direction="row" spacing={1} flexWrap="wrap">{ticket.assetReferences.map((asset) => <RelatedAssetLink key={asset._id} asset={asset} />)}</Stack> : <Typography color="text.secondary">No related assets linked.</Typography>}
                 </Paper>
               </Stack>}
               {tab === 1 && <Stack spacing={3}>

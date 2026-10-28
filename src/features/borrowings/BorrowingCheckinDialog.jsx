@@ -4,8 +4,8 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl,
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { apiClient } from '../../api/client.js';
 
-const results = ['RETURNED_GOOD', 'RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'RETURNED_FOR_REPAIR', 'LOST'];
-const conditions = ['NEW', 'EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED', 'UNUSABLE'];
+const results = ['RETURNED_GOOD', 'RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'LOST'];
+const conditions = ['EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED', 'UNUSABLE'];
 const inspections = ['PASS', 'FAIL', 'INCOMPLETE', 'REPAIR_REQUIRED'];
 
 function toLocalDateTime(value) {
@@ -14,8 +14,12 @@ function toLocalDateTime(value) {
   return date.toISOString().slice(0, 16);
 }
 
+function currentLocalDateTime() {
+  return toLocalDateTime(new Date());
+}
+
 export default function BorrowingCheckinDialog({ open, borrowing, item, saving, onClose, onSubmit }) {
-  const { register, handleSubmit, reset, control } = useForm();
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm();
   const [conditionImages, setConditionImages] = useState([]);
   const result = useWatch({ control, name: 'result' });
   const ticketsQuery = useQuery({
@@ -50,9 +54,9 @@ export default function BorrowingCheckinDialog({ open, borrowing, item, saving, 
             {result !== 'LOST' && <Controller name="conditionAfter" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-return-condition-label">Condition after return</InputLabel><Select {...field} labelId="borrow-return-condition-label" label="Condition after return">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />}
             {result !== 'LOST' && <Controller name="inspectionResult" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-inspection-label">Inspection result</InputLabel><Select {...field} labelId="borrow-inspection-label" label="Inspection result">{inspections.map((value) => <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl>} />}
             {result === 'RETURNED_INCOMPLETE' && <><TextField label="Missing accessories" helperText="Separate items with commas" {...register('missingAccessories')} /><TextField label="Reason for incomplete return" multiline minRows={2} {...register('damageDescription')} /></>}
-            {['RETURNED_DAMAGED', 'RETURNED_FOR_REPAIR', 'LOST'].includes(result) && <TextField label={result === 'LOST' ? 'Loss details' : 'Damage or repair details'} multiline minRows={2} {...register('damageDescription')} />}
+            {['RETURNED_DAMAGED', 'LOST'].includes(result) && <TextField label={result === 'LOST' ? 'Loss details' : 'Damage details'} multiline minRows={2} {...register('damageDescription')} />}
             <Controller name="relatedTicket" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-related-ticket-label">Related ticket (optional)</InputLabel><Select {...field} labelId="borrow-related-ticket-label" label="Related ticket (optional)"><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select></FormControl>} />
-            <TextField label="Return date" type="datetime-local" InputLabelProps={{ shrink: true }} {...register('returnedAt')} />
+            <TextField label="Return date" type="datetime-local" InputLabelProps={{ shrink: true }} inputProps={{ max: currentLocalDateTime() }} error={Boolean(errors.returnedAt)} helperText={errors.returnedAt?.message} {...register('returnedAt', { validate: (value) => !value || new Date(value) <= new Date() || 'Return date and time cannot be in the future' })} />
             <TextField label="Notes" multiline minRows={2} {...register('notes')} />
             <Button component="label" variant="outlined">Upload return condition images<input hidden type="file" accept="image/jpeg,image/png" multiple onChange={(event) => setConditionImages(Array.from(event.target.files ?? []))} /></Button>
             {conditionImages.length > 0 && <Typography variant="body2" color="text.secondary">{conditionImages.length} image(s) selected.</Typography>}

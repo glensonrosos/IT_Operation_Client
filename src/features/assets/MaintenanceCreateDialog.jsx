@@ -46,7 +46,7 @@ export default function MaintenanceCreateDialog({ open, asset, saving, error, on
             <Controller name="warrantyClaim" control={control} render={({ field }) => <FormControlLabel label="Process as a warranty claim" control={<Checkbox checked={Boolean(field.value)} onChange={(_, checked) => field.onChange(checked)} />} />} />
             <TextField label="Warranty claim reference" {...register('warrantyReference')} />
             <Controller name="relatedTicket" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="maintenance-ticket-label">Related ticket (optional)</InputLabel><Select {...field} labelId="maintenance-ticket-label" label="Related ticket (optional)"><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select></FormControl>} />
-            {asset?.currentCustodian && <FormHelperText>Preventive and inspection entries are allowed while assigned; return the asset before opening repair work.</FormHelperText>}
+            {asset?.currentCustodian && <FormHelperText>Preventive, repair, and upgrade maintenance entries are allowed while assigned.</FormHelperText>}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}><Button onClick={onClose}>Cancel</Button><Button type="submit" variant="contained" disabled={saving}>{saving ? 'Saving…' : 'Create maintenance record'}</Button></DialogActions>

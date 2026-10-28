@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Autocomplete, Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Tooltip } from '@mui/material';
+import { Autocomplete, Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Popper, Select, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { apiClient } from '../../api/client.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
@@ -27,28 +27,61 @@ const categoryExamples = {
   Hardware: 'Laptop, desktop, monitor, keyboard, mouse, hard drive, RAM issues',
   Software: 'Office apps, OS, drivers, antivirus, in-house applications',
   Network: 'Switch, router, Wi-Fi, VLAN, cabling, local network drop',
+  'Network & Internet': 'Wi-Fi unavailable, slow internet, VLAN issue, switch or router failure, network cable problem',
   Internet: 'Internet outage, slow connection, proxy, firewall access',
   Printer: 'Printer offline, paper jam, toner, print quality, scanning',
+  'Printing & Scanning': 'Printer offline, paper jam, toner replacement, scanning failure, poor print quality',
   Email: 'Cannot send/receive email, mailbox full, distribution list, spam',
+  'Email & Collaboration': 'Cannot send email, shared mailbox issue, distribution list change, calendar or collaboration problem',
   'User Account': 'Account locked, password reset, new user creation, profile issue',
+  'User Accounts & Access': 'Password reset, locked account, folder permission, application access, temporary access request',
   Access: 'Folder permission, application access, role-based access',
   Security: 'Phishing, malware, intrusion, data leak, policy violation',
   Server: 'Server down, disk space, service crash, backup failure',
+  'Servers & Infrastructure': 'Server outage, disk space alert, service crash, backup failure, infrastructure maintenance',
   Application: 'ERP, CRM, business app errors, login issues',
   Database: 'Database slow, connection failure, data corruption, backup',
   'Telephone/PABX': 'Phone not working, call routing, voicemail, extension setup',
   CCTV: 'Camera offline, recording issue, playback failure, access to footage',
   Backup: 'Backup failed, restore request, retention, storage full',
   'IT Asset': 'Asset assignment, return, warranty, spare part request',
+  'IT Assets & Equipment': 'Asset assignment, return, warranty issue, equipment request, spare part request',
   'Tool/Equipment': 'Borrow tools, equipment checkout, missing items',
-  Other: 'Anything not covered by the categories above'
+  Other: 'Anything not covered by the categories above',
+  'Other / General Support': 'General IT question, vendor coordination, follow-up request, or issue not covered above'
 };
+
+function TicketAssetOption({ asset, optionProps }) {
+  const [hovered, setHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const imageQuery = useQuery({
+    queryKey: ['ticket-asset-latest-image', asset.id],
+    enabled: hovered,
+    queryFn: async () => (await apiClient.get(`/assets/${asset.id}/images`)).data.data.images
+  });
+  const image = imageQuery.data?.[0];
+
+  return (
+    <Box component="li" {...optionProps} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); optionProps.onMouseEnter?.(event); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+      <Box sx={{ width: 52, height: 52, flexShrink: 0, position: 'relative', borderRadius: 1, bgcolor: 'grey.100', display: 'grid', placeItems: 'center' }}>
+        {image ? <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} /> : <Typography variant="caption" color="text.secondary" align="center">No image uploaded</Typography>}
+      </Box>
+      <Typography variant="body2">{asset.assetId} · {asset.assetName}</Typography>
+      {image && <Popper open={hovered} placement="right-start" anchorEl={anchorEl} sx={{ zIndex: 1500, pointerEvents: 'none' }}>
+        <Box sx={{ p: 0.75, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1.5, boxShadow: 6 }}>
+          <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt={`${asset.assetId} preview`} sx={{ display: 'block', width: 420, height: 420, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 1 }} />
+        </Box>
+      </Popper>}
+    </Box>
+  );
+}
 
 export default function TicketCreateDialog({ open, saving, error, canLinkAssets, canAssign, onClose, onSubmit }) {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({ defaultValues: { type: 'INCIDENT', priority: 'MEDIUM', requester: '', category: '', assetReferences: [], assignedTo: '', estimatedResolutionHours: 0, estimatedResolutionMinutes: 0, resolutionDueAt: getDefaultDueDate() } });
   const selectedRequester = useWatch({ control, name: 'requester' });
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const isItDepartmentRequester = ['IT', 'IT Department'].includes(selectedEmployee?.department?.departmentName ?? selectedEmployee?.departmentName);
   const searchTerm = useDebouncedValue(employeeSearch);
   const employeesQuery = useQuery({
     queryKey: ['ticket-requester-options', searchTerm],
@@ -61,9 +94,12 @@ export default function TicketCreateDialog({ open, saving, error, canLinkAssets,
     queryFn: async () => (await apiClient.get('/ticket-categories')).data.data.items
   });
   const assetsQuery = useQuery({
-    queryKey: ['ticket-requester-assets', selectedRequester],
+    queryKey: ['ticket-requester-assets', selectedRequester, isItDepartmentRequester],
     enabled: open && canLinkAssets && Boolean(selectedRequester),
     queryFn: async () => {
+      if (isItDepartmentRequester) {
+        return (await apiClient.get('/assets', { params: { status: 'AVAILABLE', unassigned: 'true', limit: 100 } })).data.data.items;
+      }
       const [assigned, borrowed] = await Promise.all([
         apiClient.get('/assets', { params: { currentCustodian: selectedRequester, limit: 100 } }),
         apiClient.get('/assets', { params: { currentBorrower: selectedRequester, limit: 100 } })
@@ -87,7 +123,7 @@ export default function TicketCreateDialog({ open, saving, error, canLinkAssets,
   const employees = employeesQuery.data ?? [];
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={(_, reason) => { if (reason === 'backdropClick' || reason === 'escapeKeyDown') return; onClose(); }} fullWidth maxWidth="sm">
       <form onSubmit={handleSubmit((values) => onSubmit({
         requester: values.requester,
         title: values.title,
@@ -104,7 +140,7 @@ export default function TicketCreateDialog({ open, saving, error, canLinkAssets,
         <DialogTitle>Create support ticket</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Alert severity="info">Tickets are entered by IT personnel. Employees do not log in or submit tickets themselves.</Alert>
+            <Alert severity="info">For hardware issues that require repair, please also record the maintenance activity from the asset's Maintenance tab.</Alert>
             {error && <Alert severity="error">{error}</Alert>}
             <Controller name="requester" control={control} rules={{ required: 'Select an active employee' }} render={({ field }) => (
               <Autocomplete
@@ -170,7 +206,8 @@ export default function TicketCreateDialog({ open, saving, error, canLinkAssets,
                 onChange={(_, selected) => field.onChange(selected.map((asset) => asset.id))}
                 getOptionLabel={(asset) => `${asset.assetId} · ${asset.assetName}`}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Requester’s assigned assets" helperText="Optional; select assets currently assigned to this employee" />}
+                renderOption={(props, asset) => <TicketAssetOption key={asset.id} optionProps={props} asset={asset} />}
+                renderInput={(params) => <TextField {...params} label={isItDepartmentRequester ? 'IT Department assets' : 'Requester’s assigned assets'} helperText={isItDepartmentRequester ? 'Optional; select available unassigned IT assets' : 'Optional; select assets currently assigned to this employee'} />}
               />;
             }} />}
             <TextField label="Title" error={Boolean(errors.title)} helperText={errors.title?.message} {...register('title', { required: 'Enter a concise title', minLength: { value: 3, message: 'Use at least 3 characters' } })} />
