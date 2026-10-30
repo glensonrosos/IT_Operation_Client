@@ -1,15 +1,20 @@
-FROM node:22-bookworm-slim AS build
+# Use an official Node runtime as a parent image
+#FROM node:18.17.1-buster
+FROM node:22-bookworm-slim
+# Set the working directory in the container
+WORKDIR /usr/src/app
 
-WORKDIR /app
-COPY package.json yarn.lock ./
-COPY client/package.json ./client/package.json
-COPY server/package.json ./server/package.json
-RUN corepack enable && yarn install --frozen-lockfile --ignore-scripts
-COPY client ./client
-RUN yarn workspace @itms/client build
+# Copy package.json and package-lock.json to the working directory
+COPY package.json package-lock.json ./
 
-FROM nginx:1.27-alpine
-COPY client/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/client/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Install dependencies
+RUN npm install --no-audit --no-fund
+
+# Copy the app's source code into the container
+COPY . .
+
+# Specify the port the app runs on
+EXPOSE 3011
+
+# Command to run your application
+CMD ["npm", "run", "dev"]
