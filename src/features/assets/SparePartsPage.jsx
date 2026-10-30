@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Add, EditOutlined, SwapHoriz } from '@mui/icons-material';
-import { Alert, Autocomplete, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Stack, CircularProgress, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Popper, Select, Stack, CircularProgress, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography } from '@mui/material';
 import { apiClient } from '../../api/client.js';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
@@ -53,6 +53,32 @@ function ControllerPartType({ register, types, error }) {
       </Select>
       {error && <Typography variant="caption" color="error">{error}</Typography>}
     </FormControl>
+  );
+}
+
+function StockAssetOption({ asset, optionProps }) {
+  const [hovered, setHovered] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const imageQuery = useQuery({
+    queryKey: ['spare-part-stock-asset-image', asset.id],
+    enabled: hovered,
+    queryFn: async () => (await apiClient.get(`/assets/${asset.id}/images`)).data.data.images
+  });
+  const image = imageQuery.data?.[0];
+  const { key, ...optionPropsWithoutKey } = optionProps;
+
+  return (
+    <Box component="li" key={key} {...optionPropsWithoutKey} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); optionPropsWithoutKey.onMouseEnter?.(event); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+      <Box sx={{ width: 52, height: 52, flexShrink: 0, borderRadius: 1, bgcolor: 'grey.100', display: 'grid', placeItems: 'center' }}>
+        {image ? <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} /> : <Typography variant="caption" color="text.secondary" align="center">No image uploaded</Typography>}
+      </Box>
+      <Typography variant="body2">{asset.currentCustodian?.fullName ?? 'Unassigned'} - {asset.department?.departmentName ?? 'No department'} - {asset.assetName}</Typography>
+      {image && <Popper open={hovered} placement="right-start" anchorEl={anchorEl} sx={{ zIndex: 1500, pointerEvents: 'none' }}>
+        <Box sx={{ p: 0.75, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1.5, boxShadow: 6 }}>
+          <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt={`${asset.assetId} preview`} sx={{ display: 'block', width: 420, height: 420, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 1 }} />
+        </Box>
+      </Popper>}
+    </Box>
   );
 }
 
@@ -197,7 +223,7 @@ export default function SparePartsPage() {
             <TextField id="sp-move-qty" label="Quantity" type="number" defaultValue={1} />
             <TextField id="sp-move-reason" label="Reason / Reference" multiline minRows={2} helperText="Enter at least 3 characters." />
             {movementType === 'ISSUED' && <TextField id="sp-move-ticket" label="Related Ticket ID" helperText="Optional ticket ID for this issued part." />}
-            {movementType === 'ISSUED' && <Autocomplete options={(assetsQuery.data ?? []).slice(0, 10)} value={movementAsset} inputValue={movementAssetSearch} onInputChange={(_, value) => setMovementAssetSearch(value)} onChange={(_, value) => { setMovementAsset(value); setMovementAssetSearch(value ? `${value.currentCustodian?.fullName ?? 'Unassigned'} - ${value.department?.departmentName ?? 'No department'} - ${value.assetName}` : ''); }} getOptionLabel={(asset) => `${asset.currentCustodian?.fullName ?? 'Unassigned'} - ${asset.department?.departmentName ?? 'No department'} - ${asset.assetName}`} isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText="No matching custodian assets" renderInput={(params) => <TextField {...params} label="Installed asset" helperText="Search custodian name; showing up to 10 assets." />} />}
+            {movementType === 'ISSUED' && <Autocomplete options={(assetsQuery.data ?? []).slice(0, 10)} value={movementAsset} inputValue={movementAssetSearch} onInputChange={(_, value) => setMovementAssetSearch(value)} onChange={(_, value) => { setMovementAsset(value); setMovementAssetSearch(value ? `${value.currentCustodian?.fullName ?? 'Unassigned'} - ${value.department?.departmentName ?? 'No department'} - ${value.assetName}` : ''); }} getOptionLabel={(asset) => `${asset.currentCustodian?.fullName ?? 'Unassigned'} - ${asset.department?.departmentName ?? 'No department'} - ${asset.assetName}`} isOptionEqualToValue={(a, b) => a.id === b.id} noOptionsText="No matching custodian assets" renderOption={(props, asset) => <StockAssetOption key={asset.id} optionProps={props} asset={asset} />} renderInput={(params) => <TextField {...params} label="Installed asset" helperText="Search custodian name; showing up to 10 assets." />} />}
             <Button component="label" variant="outlined">Attach movement image<input hidden type="file" accept="image/jpeg,image/png" multiple onChange={(event) => setMovementImages(Array.from(event.target.files ?? []))} /></Button>{movementImages.length > 0 && <Typography variant="caption">{movementImages.length} image(s) selected: {movementImages.map((image) => image.name).join(', ')}</Typography>}</Stack>
         </DialogContent>
         <DialogActions sx={{ position: "relative" }}>{movementMutation.isPending && <LinearProgress sx={{ position: "absolute", left: 0, right: 0, top: 0 }} />}<Button onClick={() => setMovement(null)} disabled={movementMutation.isPending}>Cancel</Button><Button variant="contained" onClick={() => { const relatedTicket = document.getElementById('sp-move-ticket')?.value.trim(); if (movementType === 'ISSUED' && !movementAsset && !relatedTicket) { setNotice('Issued movements require a Related Ticket ID or an Installed Asset.'); return; } movementMutation.mutate({ id: movement.id, images: movementImages, body: { type: document.getElementById('sp-move-type').value, quantity: Number(document.getElementById('sp-move-qty').value), reason: document.getElementById('sp-move-reason').value.trim(), reference: movementAsset?.assetId ?? '', relatedTicket: relatedTicket || undefined } }); }} disabled={movementMutation.isPending} startIcon={movementMutation.isPending ? <CircularProgress size={18} color="inherit" /> : null}>{movementMutation.isPending ? 'Uploading image�' : 'Record'}</Button></DialogActions>

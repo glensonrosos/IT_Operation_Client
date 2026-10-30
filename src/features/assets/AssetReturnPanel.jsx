@@ -77,7 +77,7 @@ export default function AssetReturnPanel({ asset }) {
             <Typography><strong>Inspection:</strong> {(selectedReturn?.inspectionResult ?? 'UNKNOWN').replaceAll('_', ' ')}</Typography>
             <Typography><strong>Missing accessories:</strong> {selectedReturn?.missingAccessories?.join(', ') || '—'}</Typography>
             <Typography><strong>Damage or repair details:</strong> {selectedReturn?.damageDescription || '—'}</Typography>
-            <Typography><strong>Return notes:</strong> {selectedReturn?.returnNotes || '—'}</Typography>
+            <Typography><strong>Return notes:</strong> {selectedReturn?.notes || '—'}</Typography>
           </Stack>
         </DialogContent>
         <DialogActions><Button onClick={() => setSelectedReturn(null)}>Close</Button></DialogActions>

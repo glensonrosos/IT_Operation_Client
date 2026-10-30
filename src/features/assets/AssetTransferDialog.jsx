@@ -48,6 +48,7 @@ export default function AssetTransferDialog({ open, asset, saving, error, onClos
               onChange={(_, employee) => { field.onChange(employee?.id ?? ''); setSearch(employee ? `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}` : ''); }}
               getOptionLabel={(employee) => `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterOptions={(options, state) => options.filter((employee) => `${employee.fullName} ${employee.employeeId ?? ''} ${employee.department?.departmentName ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 10)}
               renderInput={(params) => <TextField {...params} label="New custodian" error={Boolean(errors.toEmployee)} helperText={errors.toEmployee?.message ?? 'Search by employee name or ID'} />}
             />} />
             <Controller name="newCondition" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="transfer-condition-label">Condition at transfer</InputLabel><Select {...field} labelId="transfer-condition-label" label="Condition at transfer">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />
@@ -58,7 +59,7 @@ export default function AssetTransferDialog({ open, asset, saving, error, onClos
             <TextField label="Notes" multiline minRows={2} {...register('notes')} />
           </Stack>
         </DialogContent>
-<DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? 'Uploading condition images…' : 'Submit transfer request'}</Button></DialogActions>
+<DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? 'Uploading condition imagesï¿½' : 'Submit transfer request'}</Button></DialogActions>
       </form>
     </Dialog>
   );

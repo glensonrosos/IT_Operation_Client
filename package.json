@@ -20,7 +20,8 @@
     "react-hook-form": "7.54.2",
     "react-is": "18.3.1",
     "react-router-dom": "6.28.1",
-    "recharts": "3.10.1"
+    "recharts": "3.10.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "18.3.18",

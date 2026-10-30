@@ -11,6 +11,7 @@ function localDateTime(value) {
 }
 
 function AssetOption({ asset, optionProps }) {
+  const { key, ...optionPropsWithoutKey } = optionProps;
   const [hovered, setHovered] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const imageQuery = useQuery({
@@ -21,7 +22,7 @@ function AssetOption({ asset, optionProps }) {
   const image = imageQuery.data?.[0];
 
   return (
-    <Box component="li" {...optionProps} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); optionProps.onMouseEnter?.(event); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+    <Box component="li" key={key} {...optionPropsWithoutKey} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); optionPropsWithoutKey.onMouseEnter?.(event); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
       <Box sx={{ width: 52, height: 52, flexShrink: 0, position: 'relative', borderRadius: 1, bgcolor: 'grey.100', display: 'grid', placeItems: 'center' }}>
         {image ? <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} /> : <Typography variant="caption" color="text.secondary" align="center">No image uploaded</Typography>}
       </Box>
