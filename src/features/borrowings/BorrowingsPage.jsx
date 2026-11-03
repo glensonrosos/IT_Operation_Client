@@ -22,7 +22,7 @@ export default function BorrowingsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('BORROWED');
+  const [status, setStatus] = useState('');
   const [overdue, setOverdue] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [notice, setNotice] = useState({ open: false, text: '', severity: 'success' });
