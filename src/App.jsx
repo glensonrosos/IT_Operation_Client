@@ -48,7 +48,7 @@ export default function App() {
             <Route path="/borrowings" element={<RequirePermission permissions={['borrowing.view', 'borrowing.view.assigned']}><BorrowingsPage /></RequirePermission>} />
             <Route path="/borrowings/:id" element={<RequirePermission permissions={['borrowing.view', 'borrowing.view.assigned']}><BorrowingDetailPage /></RequirePermission>} />
             <Route path="/maintenance" element={<RequirePermission permissions={['maintenance.view']}><MaintenancePage /></RequirePermission>} />
-            <Route path="/warranties" element={<RequirePermission permissions={['maintenance.view']}><WarrantiesPage /></RequirePermission>} />
+            <Route path="/warranties" element={<RequirePermission permissions={['maintenance.view']} denyRoles={['IT_STAFF']}><WarrantiesPage /></RequirePermission>} />
             <Route path="/it-accounts" element={<RequirePermission permissions={['users.view']}><UsersPage /></RequirePermission>} />
             <Route path="/settings" element={<RequirePermission permissions={['settings.view']}><SettingsPage /></RequirePermission>} />
             <Route path="/tickets" element={<RequirePermission permissions={['tickets.view', 'tickets.view.assigned']}><TicketsPage /></RequirePermission>} />

@@ -54,7 +54,7 @@ export default function DirectoryNavigation() {
     [permitted('ticketCategories.manage') || can(user, 'sla.manage'), '/ticket-settings', 'Ticket setup'],
     [can(user, 'assetTypes.manage'), '/asset-setup', 'Asset setup'],
     [can(user, 'spareParts.manage'), '/spare-part-setup', 'Spare-part setup'],
-    [can(user, 'maintenance.view'), '/warranties', 'Warranty'],
+    [can(user, 'maintenance.view') && user?.role?.key !== 'IT_STAFF', '/warranties', 'Warranty'],
     [can(user, 'users.view'), '/it-accounts', 'IT accounts'],
     [can(user, 'settings.view'), '/settings', 'Settings'],
     [can(user, 'departments.view') && user?.role?.key !== 'IT_STAFF', '/departments', 'Departments']
