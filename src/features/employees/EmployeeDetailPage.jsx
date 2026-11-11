@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, Button, Chip, CircularProgress, Container, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tab, Tabs, Typography } from '@mui/material';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Download, PersonOutline, UploadFile } from '@mui/icons-material';
+import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, Paper, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tab, Tabs, Typography } from '@mui/material';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
 import DirectoryNavigation from '../../components/DirectoryNavigation.jsx';
@@ -12,7 +13,31 @@ const tabs = ['Overview', 'Current Assets', 'Asset History', 'Asset Transfers', 
 export default function EmployeeDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState(0);
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(false);
+  const [notice, setNotice] = useState({ open: false, message: '', severity: 'success' });
+  const uploadPhoto = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      await apiClient.post(`/employees/${id}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setPhotoVersion(Date.now());
+      await queryClient.invalidateQueries({ queryKey: ['employee', id] });
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setNotice({ open: true, message: 'Employee photo uploaded.', severity: 'success' });
+    } catch (error) {
+      setNotice({ open: true, message: error?.response?.data?.message ?? 'Unable to upload the photo.', severity: 'error' });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
   const query = useQuery({
     queryKey: ['employee', id],
     queryFn: async () => (await apiClient.get(`/employees/${id}`)).data.data.employee
@@ -58,12 +83,23 @@ export default function EmployeeDetailPage() {
         {query.isPending ? <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}><CircularProgress /></Box> : query.isError ? <Alert severity="error">{query.error?.response?.data?.message ?? 'Unable to load employee record.'}</Alert> : employee && <Stack spacing={3}>
           <Paper elevation={0} sx={{ p: 3, border: 1, borderColor: 'divider' }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={2}>
+              <Box onDoubleClick={() => employee.hasPhoto && setPhotoPreview(true)} title={employee.hasPhoto ? 'Double-click to preview' : ''} sx={{ width: 112, height: 112, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden', display: 'grid', placeItems: 'center', bgcolor: 'grey.200', cursor: employee.hasPhoto ? 'zoom-in' : 'default', flexShrink: 0 }}>
+                {employee.hasPhoto
+                  ? <Box component="img" src={`/api/employees/${employee.id}/photo?v=${photoVersion}`} alt={employee.fullName} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <PersonOutline sx={{ fontSize: 56, color: 'grey.500' }} />}
+              </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="overline" color="primary.main" fontWeight={700}>{employee.employeeId}</Typography>
                 <Typography variant="h4" component="h1" fontWeight={700}>{employee.fullName}</Typography>
                 <Typography color="text.secondary">{employee.position || 'Position not recorded'} · {employee.department?.departmentName ?? 'No department'}</Typography>
               </Box>
-              <Chip label={employee.isArchived ? 'ARCHIVED' : employee.status.replaceAll('_', ' ')} color={employee.isArchived ? 'default' : employee.status === 'ACTIVE' ? 'success' : 'warning'} />
+              <Stack spacing={1} alignItems={{ xs: 'flex-start', sm: 'flex-end' }}>
+                <Chip label={employee.isArchived ? 'ARCHIVED' : employee.status.replaceAll('_', ' ')} color={employee.isArchived ? 'default' : employee.status === 'ACTIVE' ? 'success' : 'warning'} />
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {!employee.isArchived && can(user, 'employees.update') && <Button size="small" variant="outlined" component="label" startIcon={photoUploading ? <CircularProgress size={16} /> : <UploadFile />}>{photoUploading ? 'Uploading…' : 'Upload photo'}<input hidden type="file" accept="image/jpeg,image/png" onChange={uploadPhoto} /></Button>}
+                  {employee.hasPhoto && <Button size="small" variant="outlined" component="a" href={`/api/employees/${employee.id}/photo?download=1`} startIcon={<Download />}>Download</Button>}
+                </Stack>
+              </Stack>
             </Stack>
           </Paper>
           <Paper elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
@@ -91,6 +127,12 @@ export default function EmployeeDetailPage() {
           </Paper>
         </Stack>}
       </Container>
+      <Dialog open={photoPreview} onClose={() => setPhotoPreview(false)} maxWidth="lg" onClick={() => setPhotoPreview(false)}>
+        <Box component="img" src={`/api/employees/${employee?.id}/photo?v=${photoVersion}`} alt={employee?.fullName ?? 'Employee photo'} sx={{ display: 'block', maxWidth: '92vw', maxHeight: '88vh' }} />
+      </Dialog>
+      <Snackbar open={notice.open} autoHideDuration={5000} onClose={() => setNotice((current) => ({ ...current, open: false }))}>
+        <Alert severity={notice.severity} onClose={() => setNotice((current) => ({ ...current, open: false }))}>{notice.message}</Alert>
+      </Snackbar>
     </Box>
   );
 }

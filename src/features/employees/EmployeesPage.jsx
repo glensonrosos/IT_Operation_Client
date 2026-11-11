@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Add, ArchiveOutlined, Download, EditOutlined, RestoreOutlined, UploadFile, VisibilityOutlined } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
 import DirectoryNavigation from '../../components/DirectoryNavigation.jsx';
@@ -121,6 +121,15 @@ export default function EmployeesPage() {
       const seen = new Set();
       const failures = [];
       let created = 0;
+      let updated = 0;
+      const allEmployees = [];
+      for (let pageNumber = 1; ; pageNumber += 1) {
+        const response = await apiClient.get('/employees', { params: { page: pageNumber, limit: 100, includeArchived: 'true' } });
+        allEmployees.push(...(response.data.data.items ?? []));
+        if (allEmployees.length >= (response.data.data.pagination?.total ?? allEmployees.length)) break;
+      }
+      const byEmployeeId = new Map(allEmployees.map((employee) => [String(employee.employeeId ?? '').trim().toLowerCase(), employee]));
+      const byName = new Map(allEmployees.map((employee) => [String(employee.fullName ?? '').trim().toLowerCase(), employee]));
       for (let index = 0; index < importedRows.length; index += 1) {
         const source = importedRows[index];
         const row = Object.fromEntries(Object.entries(source).map(([key, value]) => [normalize(key), String(value).trim()]));
@@ -139,33 +148,33 @@ export default function EmployeesPage() {
           continue;
         }
         seen.add(nameKey);
+        const existing = (row.employeeid ? byEmployeeId.get(row.employeeid.toLowerCase()) : null) ?? byName.get(nameKey);
+        const payload = {
+          firstName,
+          lastName,
+          department: departmentRecord.id,
+          position: row.position || undefined,
+          email: row.email || undefined,
+          contactNumber: row.contactnumber || undefined,
+          location: row.location || undefined,
+          notes: row.notes || undefined,
+          status: row.status ? row.status.toUpperCase().replace(/\s+/g, '_') : (existing ? undefined : 'ACTIVE')
+        };
         try {
-          const existing = (await apiClient.get('/employees', {
-            params: { search: `${firstName} ${lastName}`, includeArchived: 'true', limit: 100 }
-          })).data.data.items ?? [];
-          if (existing.some((employee) => employee.fullName?.trim().toLowerCase() === nameKey)) {
-            failures.push(`Row ${index + 2}: An employee with this name already exists`);
-            continue;
+          if (existing) {
+            await apiClient.patch(`/employees/${existing.id}`, payload);
+            updated += 1;
+          } else {
+            await apiClient.post('/employees', payload);
+            created += 1;
           }
-          await apiClient.post('/employees', {
-            firstName,
-            lastName,
-            department: departmentRecord.id,
-            position: row.position || undefined,
-            email: row.email || undefined,
-            contactNumber: row.contactnumber || undefined,
-            location: row.location || undefined,
-            notes: row.notes || undefined,
-            status: row.status || 'ACTIVE'
-          });
-          created += 1;
         } catch (error) {
           failures.push(`Row ${index + 2}: ${errorMessage(error)}`);
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      setImportReport({ created, failures });
-      setNotice({ open: true, message: `Import finished: ${created} created${failures.length ? `, ${failures.length} rejected` : ''}.${failures.length ? ` ${failures.slice(0, 3).join(' | ')}` : ''}`, severity: failures.length ? 'warning' : 'success' });
+      setImportReport({ created, updated, failures });
+      setNotice({ open: true, message: `Import finished: ${created} created, ${updated} updated${failures.length ? `, ${failures.length} rejected` : ''}.${failures.length ? ` ${failures.slice(0, 3).join(' | ')}` : ''}`, severity: failures.length ? 'warning' : 'success' });
     } catch {
       setNotice({ open: true, message: 'Unable to read the .xlsx file. Check that it contains a valid first worksheet.', severity: 'error' });
     } finally {
@@ -229,7 +238,7 @@ export default function EmployeesPage() {
               <TableBody>
                 {employeesQuery.isPending ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 5, color: 'text.secondary' }}>No employee records found.</TableCell></TableRow> : rows.map((employee) => (
                   <TableRow hover key={employee.id}>
-                    <TableCell><Stack><Typography fontWeight={600}>{employee.fullName}</Typography><Typography variant="body2" color="text.secondary">{employee.email || 'No email recorded'}</Typography></Stack></TableCell>
+                    <TableCell><Tooltip arrow placement="right" title={employee.hasPhoto ? <Box component="img" src={`/api/employees/${employee.id}/photo`} alt={employee.fullName} sx={{ display: 'block', width: 160, height: 160, objectFit: 'cover', borderRadius: 1 }} /> : ''}><Stack><Typography fontWeight={600}>{employee.fullName}</Typography><Typography variant="body2" color="text.secondary">{employee.email || 'No email recorded'}</Typography></Stack></Tooltip></TableCell>
                     
                     <TableCell>{employee.department?.departmentName ?? '—'}</TableCell>
                     <TableCell>{employee.position || '—'}</TableCell>
@@ -254,7 +263,7 @@ export default function EmployeesPage() {
         <DialogTitle>Employee import results</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={1.5}>
-            <Typography>Created: <strong>{importReport?.created ?? 0}</strong> · Rejected: <strong>{importReport?.failures?.length ?? 0}</strong></Typography>
+            <Typography>Created: <strong>{importReport?.created ?? 0}</strong> · Updated: <strong>{importReport?.updated ?? 0}</strong> · Rejected: <strong>{importReport?.failures?.length ?? 0}</strong></Typography>
             {importReport?.failures?.length > 0 ? <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 360, overflow: 'auto' }}><Stack spacing={1}>{importReport.failures.map((failure) => <Typography key={failure} variant="body2" color="error.main">{failure}</Typography>)}</Stack></Paper> : <Alert severity="success">All rows were imported successfully.</Alert>}
           </Stack>
         </DialogContent>

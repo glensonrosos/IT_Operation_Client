@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Add, DeleteOutline, EditOutlined } from '@mui/icons-material';
+import { Add, DeleteOutline, Download, EditOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography } from '@mui/material';
 import { apiClient } from '../../api/client.js';
 import DirectoryNavigation from '../../components/DirectoryNavigation.jsx';
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { can } from '../../utils/permissions.js';
 import DepartmentFormDialog from './DepartmentFormDialog.jsx';
+import * as XLSX from 'xlsx';
 
 function errorMessage(error) {
   return error?.response?.data?.message ?? 'The operation could not be completed.';
@@ -25,6 +26,7 @@ export default function DepartmentsPage() {
   const [editingDepartment, setEditingDepartment] = useState(null);
   const [confirmDepartment, setConfirmDepartment] = useState(null);
   const [notice, setNotice] = useState({ open: false, message: '', severity: 'success' });
+  const [fileOperation, setFileOperation] = useState('');
   const searchTerm = useDebouncedValue(search);
   const params = { page: page + 1, limit: 15, search: searchTerm || undefined, status: status || undefined, sortBy, sortOrder };
   const departmentsQuery = useQuery({
@@ -64,6 +66,33 @@ export default function DepartmentsPage() {
       setNotice({ open: true, message: errorMessage(error), severity: 'error' });
     }
   };
+  const exportDepartments = async () => {
+    setFileOperation('export');
+    try {
+      const allDepartments = [];
+      for (let pageNumber = 1; ; pageNumber += 1) {
+        const response = await apiClient.get('/departments', { params: { page: pageNumber, limit: 100, status: status || undefined, search: searchTerm || undefined, sortBy, sortOrder } });
+        allDepartments.push(...(response.data.data.items ?? []));
+        if (allDepartments.length >= (response.data.data.pagination?.total ?? allDepartments.length)) break;
+      }
+      const exportRows = allDepartments.map((department) => ({
+        'Department Code': department.departmentCode,
+        Department: department.departmentName,
+        Description: department.description ?? '',
+        'Department Head': department.departmentHead?.fullName ?? '',
+        Location: department.location ?? '',
+        Status: department.status
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(exportRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Departments');
+      XLSX.writeFile(workbook, `departments-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (error) {
+      setNotice({ open: true, message: errorMessage(error), severity: 'error' });
+    } finally {
+      setFileOperation('');
+    }
+  };
   const rows = departmentsQuery.data?.items ?? [];
   const pagination = departmentsQuery.data?.pagination;
 
@@ -78,7 +107,10 @@ export default function DepartmentsPage() {
               <Typography variant="h4" component="h1" fontWeight={700}>Departments</Typography>
               <Typography color="text.secondary">Organizational directory and employee department references.</Typography>
             </Box>
-            {can(user, 'departments.create') && <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingDepartment(null); setDialogOpen(true); }}>Add department</Button>}
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" startIcon={fileOperation === 'export' ? <CircularProgress size={18} /> : <Download />} onClick={exportDepartments} disabled={Boolean(fileOperation)}>{fileOperation === 'export' ? 'Exporting…' : 'Export .xlsx'}</Button>
+              {can(user, 'departments.create') && <Button variant="contained" startIcon={<Add />} onClick={() => { setEditingDepartment(null); setDialogOpen(true); }}>Add department</Button>}
+            </Stack>
           </Stack>
           <Paper elevation={0} sx={{ p: 2, border: 1, borderColor: 'divider' }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
