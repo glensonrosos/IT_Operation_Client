@@ -69,7 +69,7 @@ function RelatedAssetLink({ asset }) {
   );
 }
 
-function AttachmentPreview({ ticketId, attachment, onDownload, onPreview }) {
+function AttachmentPreview({ ticketId, attachment, onDownload, onPreview, onDelete }) {
   const [url, setUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const isImage = (attachment.mimeType || '').startsWith('image/');
@@ -95,7 +95,7 @@ function AttachmentPreview({ ticketId, attachment, onDownload, onPreview }) {
           url ? <Box component="img" src={url} alt={attachment.originalName} onDoubleClick={() => onPreview?.(url, attachment)} sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1, cursor: onPreview ? 'pointer' : 'default' }} /> : <Typography variant="caption">Preview unavailable</Typography>
         )
       ) : <Typography variant="caption" sx={{ wordBreak: 'break-all' }}>{attachment.originalName}</Typography>}
-      <Button size="small" startIcon={<CloudDownload />} onClick={() => onDownload(attachment)}>Download</Button>
+      <Stack direction="row" spacing={0.5}><Button size="small" startIcon={<CloudDownload />} onClick={() => onDownload(attachment)}>Download</Button>{onDelete && <Button size="small" color="error" onClick={() => onDelete(attachment)}>Delete</Button>}</Stack>
     </Paper>
   );
 }
@@ -163,6 +163,11 @@ export default function TicketDetailPage() {
       return apiClient.post(`/tickets/${id}/attachments`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
     },
     onSuccess: async () => { await invalidateTicket(); setNotice({ open: true, message: 'Attachment uploaded.', severity: 'success' }); },
+    onError: (error) => setNotice({ open: true, message: errorMessage(error), severity: 'error' })
+  });
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: (attachment) => apiClient.delete(`/tickets/${id}/attachments/${attachment._id}`),
+    onSuccess: async () => { await invalidateTicket(); setNotice({ open: true, message: 'Attachment permanently deleted.', severity: 'success' }); },
     onError: (error) => setNotice({ open: true, message: errorMessage(error), severity: 'error' })
   });
   const hasTroubleshooting = Boolean((troubleshootingQuery.data ?? []).length);
@@ -338,7 +343,7 @@ export default function TicketDetailPage() {
                   {entry.diagnosis && <Typography sx={{ mt: 1 }}><strong>Diagnosis:</strong> {entry.diagnosis}</Typography>}
                   {entry.actionTaken && <Typography sx={{ mt: 1 }}><strong>Action:</strong> {entry.actionTaken}</Typography>}
                   {entry.partsReplaced?.length > 0 && <Typography sx={{ mt: 1 }}><strong>Parts replaced:</strong> {entry.partsReplaced.join(', ')}</Typography>}
-                  {(entry.attachments ?? []).length > 0 && <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2 }}>{entry.attachments.map((attachment) => <AttachmentPreview key={attachment._id} ticketId={id} attachment={attachment} onDownload={downloadAttachment} onPreview={(url, attachment) => setPreviewImage({ url, attachment })} />)}</Stack>}
+                  {(entry.attachments ?? []).length > 0 && <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2 }}>{entry.attachments.map((attachment) => <AttachmentPreview key={attachment._id} ticketId={id} attachment={attachment} onDownload={downloadAttachment} onPreview={(url, attachment) => setPreviewImage({ url, attachment })} onDelete={user?.role?.key === 'SUPER_IT_ADMIN' ? (item) => { if (window.confirm(`Permanently delete ${item.originalName}? This action will be recorded in ticket history.`)) deleteAttachmentMutation.mutate(item); } : null} />)}</Stack>}
                 </Paper>)}
                 {can(user, 'tickets.update') && !['CLOSED', 'CANCELLED', 'DUPLICATED'].includes(ticket.status) && <Stack component="form" spacing={1.5} onSubmit={submitTroubleshooting}>
                   <Typography variant="h6" fontWeight={700}>Record troubleshooting</Typography>

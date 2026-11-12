@@ -238,7 +238,7 @@ export default function EmployeesPage() {
               <TableBody>
                 {employeesQuery.isPending ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={5} align="center" sx={{ py: 5, color: 'text.secondary' }}>No employee records found.</TableCell></TableRow> : rows.map((employee) => (
                   <TableRow hover key={employee.id}>
-                    <TableCell><Tooltip arrow placement="right" title={employee.hasPhoto ? <Box component="img" src={`/api/employees/${employee.id}/photo`} alt={employee.fullName} sx={{ display: 'block', width: 160, height: 160, objectFit: 'cover', borderRadius: 1 }} /> : ''}><Stack><Typography fontWeight={600}>{employee.fullName}</Typography><Typography variant="body2" color="text.secondary">{employee.email || 'No email recorded'}</Typography></Stack></Tooltip></TableCell>
+                    <TableCell><Tooltip arrow placement="right" title={employee.hasPhoto ? <Box component="img" src={`/api/employees/${employee.id}/photo`} alt={employee.fullName} sx={{ display: 'block', width: 160, height: 160, objectFit: 'cover', borderRadius: 1 }} /> : ''}><Stack><Button size="small" sx={{ alignSelf: 'flex-start', px: 0, minWidth: 0, fontWeight: 600 }} onClick={() => navigate(`/employees/${employee.id}`)}>{employee.fullName}</Button><Typography variant="body2" color="text.secondary">{employee.email || 'No email recorded'}</Typography></Stack></Tooltip></TableCell>
                     
                     <TableCell>{employee.department?.departmentName ?? '—'}</TableCell>
                     <TableCell>{employee.position || '—'}</TableCell>
