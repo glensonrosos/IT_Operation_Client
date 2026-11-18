@@ -6,6 +6,10 @@ import { apiClient } from '../../api/client.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
 const conditions = ['NEW', 'EXCELLENT', 'GOOD', 'FAIR'];
+function isItDepartment(employee) {
+  return [employee?.department?.departmentCode, employee?.department?.departmentName]
+    .some((value) => String(value ?? '').trim().toUpperCase() === 'IT');
+}
 
 export default function AssetAssignmentDialog({ open, asset, saving, error, onClose, onSubmit }) {
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm();
@@ -34,14 +38,14 @@ export default function AssetAssignmentDialog({ open, asset, saving, error, onCl
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {error && <FormHelperText error>{error}</FormHelperText>}
-            <Controller name="employee" control={control} rules={{ required: 'Select an active employee' }} render={({ field }) => <Autocomplete
-              options={employeesQuery.data ?? []}
+            <Controller name="employee" control={control} rules={{ required: 'Select an active employee', validate: () => !isItDepartment(selectedEmployee) || 'Assets cannot be assigned to employees in the IT department' }} render={({ field }) => <Autocomplete
+              options={(employeesQuery.data ?? []).filter((employee) => !isItDepartment(employee))}
               loading={employeesQuery.isFetching}
               value={selectedEmployee}
               inputValue={employeeSearch}
               onInputChange={(_, value) => setEmployeeSearch(value)}
               onChange={(_, employee) => { setSelectedEmployee(employee); setEmployeeSearch(employee ? `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}` : ''); field.onChange(employee?.id ?? ''); }}
-              noOptionsText={employeesQuery.isError ? 'Unable to load employees' : searchTerm ? 'No matching active employees' : 'No active employees found'}
+              noOptionsText={employeesQuery.isError ? 'Unable to load employees' : searchTerm ? 'No matching eligible employees' : 'No eligible employees found'}
               getOptionLabel={(employee) => `${employee.fullName} - ${employee.department?.departmentName ?? 'No department'}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               filterOptions={(options, state) => options.filter((employee) => `${employee.fullName} ${employee.employeeId ?? ''} ${employee.department?.departmentName ?? ''}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 5)}

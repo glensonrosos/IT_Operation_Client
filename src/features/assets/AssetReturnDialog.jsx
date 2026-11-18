@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, CircularProgress, LinearProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, InputLabel, MenuItem, Select, Stack, TextField } from '@mui/material';
-import { Controller, useForm } from 'react-hook-form';
+import { Alert, Button, CircularProgress, LinearProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, InputLabel, MenuItem, Select, Stack, TextField } from '@mui/material';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { apiClient } from '../../api/client.js';
 
 const conditions = ['NEW', 'EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED', 'UNUSABLE'];
@@ -15,6 +15,8 @@ function currentLocalDateTime() {
 
 export default function AssetReturnDialog({ open, asset, saving, error, onClose, onSubmit }) {
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm();
+  const selectedResult = useWatch({ control, name: 'result' });
+  const ticketRequired = ['RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'RETURNED_FOR_REPAIR'].includes(selectedResult);
   const [images, setImages] = useState([]);
   const ticketsQuery = useQuery({
     queryKey: ['asset-return-tickets', asset?.id],
@@ -25,7 +27,7 @@ export default function AssetReturnDialog({ open, asset, saving, error, onClose,
   useEffect(() => {
     if (open) reset({
       conditionAfter: asset?.condition ?? 'GOOD', result: 'RETURNED_GOOD', inspectionResult: 'PASS',
-      missingAccessories: '', damageDescription: '', notes: '', relatedTicket: '', returnDate: ''
+      missingAccessories: '', damageDescription: '', notes: '', relatedTicket: '', returnDate: currentLocalDateTime()
     });
     setImages([]);
   }, [asset, open, reset]);
@@ -41,6 +43,9 @@ export default function AssetReturnDialog({ open, asset, saving, error, onClose,
       }))}>
         <DialogTitle>Record return for {asset?.assetId}</DialogTitle>
         <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            If the returned asset has an issue, please create a ticket first before proceeding with the return.
+          </Alert>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {error && <FormHelperText error>{error}</FormHelperText>}
             <Controller name="result" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="return-result-label">Return result</InputLabel><Select {...field} labelId="return-result-label" label="Return result">{results.map((result) => <MenuItem key={result} value={result}>{result.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl>} />
@@ -48,13 +53,13 @@ export default function AssetReturnDialog({ open, asset, saving, error, onClose,
             <Controller name="conditionAfter" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="return-condition-label">Condition after return</InputLabel><Select {...field} labelId="return-condition-label" label="Condition after return">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />
             <TextField label="Missing accessories" helperText="Separate missing items with commas" {...register('missingAccessories')} />
             <TextField label="Damage or repair details" multiline minRows={2} {...register('damageDescription')} />
-            <Controller name="relatedTicket" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="return-ticket-label">Related ticket (optional)</InputLabel><Select {...field} labelId="return-ticket-label" label="Related ticket (optional)"><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select></FormControl>} />
+            <Controller name="relatedTicket" control={control} rules={{ validate: (value) => !ticketRequired || Boolean(value) || 'A related ticket is required for damaged, incomplete, or repair returns' }} render={({ field, fieldState }) => <FormControl fullWidth error={Boolean(fieldState.error)}><InputLabel id="return-ticket-label">Related ticket{ticketRequired ? '' : ' (optional)'}</InputLabel><Select {...field} labelId="return-ticket-label" label={`Related ticket${ticketRequired ? '' : ' (optional)'}`}><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select>{fieldState.error && <FormHelperText>{fieldState.error.message}</FormHelperText>}</FormControl>} />
             <Stack spacing={1}><Button variant="outlined" component="label">Upload condition images<input hidden type="file" accept="image/jpeg,image/png" multiple onChange={(event) => setImages(Array.from(event.target.files ?? []))} /></Button>{images.length > 0 && <FormHelperText>{images.length} image{images.length === 1 ? '' : 's'} selected</FormHelperText>}</Stack>
             <TextField label="Return date" type="datetime-local" InputLabelProps={{ shrink: true }} inputProps={{ max: currentLocalDateTime() }} error={Boolean(errors.returnDate)} helperText={errors.returnDate?.message} {...register('returnDate', { validate: (value) => !value || new Date(value) <= new Date() || 'Return date cannot be in the future' })} />
             <TextField label="Notes" multiline minRows={2} {...register('notes')} />
           </Stack>
         </DialogContent>
-<DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? 'Uploading condition images�' : 'Record return'}</Button></DialogActions>
+<DialogActions sx={{ p: 2, position: 'relative' }}>{saving && <LinearProgress sx={{ position: 'absolute', left: 0, right: 0, top: 0 }} />}<Button onClick={onClose} disabled={saving}>Cancel</Button><Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}>{saving ? 'Uploading condition images�' : 'Record return'}</Button></DialogActions>
       </form>
     </Dialog>
   );

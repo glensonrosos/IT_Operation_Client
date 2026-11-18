@@ -92,7 +92,7 @@ export default function AssetMaintenancePanel({ asset }) {
           <Typography><strong>Vendor:</strong> {viewRecord?.vendor || '—'}</Typography>
           <Typography><strong>Notes:</strong> {viewRecord?.notes || '—'}</Typography>
           <Typography><strong>Related ticket:</strong> {viewRecord?.relatedTicket ? <Button component={Link} to={`/tickets/${viewRecord.relatedTicket._id ?? viewRecord.relatedTicket.id}`} size="small" sx={{ ml: 0.5, p: 0, minWidth: 0, verticalAlign: 'baseline' }}>{viewRecord.relatedTicket.ticketNumber ?? viewRecord.relatedTicket.title ?? 'View ticket'}</Button> : '—'}</Typography>
-          <Typography><strong>Cost:</strong> {viewRecord?.cost ?? '—'} {viewRecord?.currency || ''}</Typography>
+          <Typography><strong>Cost:</strong> {viewRecord?.cost ?? '—'} {viewRecord?.cost != null ? 'PHP' : ''}</Typography>
           <Typography><strong>Completed:</strong> {viewRecord?.completedAt ? new Date(viewRecord.completedAt).toLocaleString() : '—'}</Typography>
         </Stack></DialogContent>
         <DialogActions><Button onClick={() => setViewRecord(null)}>Close</Button></DialogActions>

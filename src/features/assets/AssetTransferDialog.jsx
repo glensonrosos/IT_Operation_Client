@@ -6,6 +6,10 @@ import { apiClient } from '../../api/client.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
 const conditions = ['NEW', 'EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED', 'UNUSABLE'];
+function isItDepartment(employee) {
+  return [employee?.department?.departmentCode, employee?.department?.departmentName]
+    .some((value) => String(value ?? '').trim().toUpperCase() === 'IT');
+}
 
 export default function AssetTransferDialog({ open, asset, saving, error, onClose, onSubmit }) {
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm();
@@ -20,7 +24,8 @@ export default function AssetTransferDialog({ open, asset, saving, error, onClos
   });
   const employees = employeesQuery.data ?? [];
   const selectedEmployee = employees.find((employee) => employee.id === selectedEmployeeId) ?? null;
-  const employeeOptions = selectedEmployee && !employees.some((employee) => employee.id === selectedEmployee.id) ? [selectedEmployee, ...employees] : employees;
+  const eligibleEmployees = employees.filter((employee) => !isItDepartment(employee));
+  const employeeOptions = selectedEmployee && !isItDepartment(selectedEmployee) && !eligibleEmployees.some((employee) => employee.id === selectedEmployee.id) ? [selectedEmployee, ...eligibleEmployees] : eligibleEmployees;
 
   useEffect(() => {
     if (open) reset({ toEmployee: '', newCondition: asset?.condition ?? 'GOOD', location: asset?.location ?? '', reason: '', accessories: '', notes: '' });
@@ -39,7 +44,7 @@ export default function AssetTransferDialog({ open, asset, saving, error, onClos
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {error && <FormHelperText error>{error}</FormHelperText>}
-            <Controller name="toEmployee" control={control} rules={{ required: 'Select the new custodian' }} render={({ field }) => <Autocomplete
+            <Controller name="toEmployee" control={control} rules={{ required: 'Select the new custodian', validate: () => !isItDepartment(selectedEmployee) || 'Assets cannot be transferred to employees in the IT department' }} render={({ field }) => <Autocomplete
               options={employeeOptions}
               loading={employeesQuery.isFetching}
               value={selectedEmployee}

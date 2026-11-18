@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { apiClient } from '../../api/client.js';
 
@@ -27,6 +27,7 @@ export default function BorrowingCheckinDialog({ open, borrowing, item, saving, 
     enabled: open && Boolean(item?.asset?._id),
     queryFn: async () => (await apiClient.get('/tickets', { params: { asset: item.asset._id, limit: 100 } })).data.data.items
   });
+  const availableTickets = (ticketsQuery.data ?? []).filter((ticket) => String(ticket.status ?? '').toUpperCase() !== 'CLOSED');
 
   useEffect(() => {
     if (open) reset({ result: 'RETURNED_GOOD', conditionAfter: item?.asset?.condition ?? 'GOOD', inspectionResult: 'PASS', missingAccessories: '', damageDescription: '', notes: '', relatedTicket: '', returnedAt: toLocalDateTime(new Date()) });
@@ -49,13 +50,16 @@ export default function BorrowingCheckinDialog({ open, borrowing, item, saving, 
       }))}>
         <DialogTitle>Check in {item?.assetIdSnapshot} · {borrowing?.borrowingNumber}</DialogTitle>
         <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            If the item has an issue during check-in, please create a ticket first before proceeding.
+          </Alert>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Controller name="result" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-return-result-label">Return result</InputLabel><Select {...field} labelId="borrow-return-result-label" label="Return result">{results.map((value) => <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl>} />
             {result !== 'LOST' && <Controller name="conditionAfter" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-return-condition-label">Condition after return</InputLabel><Select {...field} labelId="borrow-return-condition-label" label="Condition after return">{conditions.map((condition) => <MenuItem key={condition} value={condition}>{condition}</MenuItem>)}</Select></FormControl>} />}
             {result !== 'LOST' && <Controller name="inspectionResult" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-inspection-label">Inspection result</InputLabel><Select {...field} labelId="borrow-inspection-label" label="Inspection result">{inspections.map((value) => <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl>} />}
             {result === 'RETURNED_INCOMPLETE' && <><TextField label="Missing accessories" helperText="Separate items with commas" {...register('missingAccessories')} /><TextField label="Reason for incomplete return" multiline minRows={2} {...register('damageDescription')} /></>}
             {['RETURNED_DAMAGED', 'LOST'].includes(result) && <TextField label={result === 'LOST' ? 'Loss details' : 'Damage details'} multiline minRows={2} {...register('damageDescription')} />}
-            <Controller name="relatedTicket" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="borrow-related-ticket-label">Related ticket (optional)</InputLabel><Select {...field} labelId="borrow-related-ticket-label" label="Related ticket (optional)"><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select></FormControl>} />
+            <Controller name="relatedTicket" control={control} rules={{ validate: (value) => !['RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'LOST'].includes(result) || Boolean(value) || 'A related ticket is required for damaged, incomplete, or lost returns' }} render={({ field, fieldState }) => <FormControl fullWidth error={Boolean(fieldState.error)}><InputLabel id="borrow-related-ticket-label">Related ticket{['RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'LOST'].includes(result) ? '' : ' (optional)'}</InputLabel><Select {...field} labelId="borrow-related-ticket-label" label={`Related ticket${['RETURNED_DAMAGED', 'RETURNED_INCOMPLETE', 'LOST'].includes(result) ? '' : ' (optional)'}`}><MenuItem value="">None</MenuItem>{availableTickets.map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select>{fieldState.error && <FormHelperText>{fieldState.error.message}</FormHelperText>}</FormControl>} />
             <TextField label="Return date" type="datetime-local" InputLabelProps={{ shrink: true }} inputProps={{ max: currentLocalDateTime() }} error={Boolean(errors.returnedAt)} helperText={errors.returnedAt?.message} {...register('returnedAt', { validate: (value) => !value || new Date(value) <= new Date() || 'Return date and time cannot be in the future' })} />
             <TextField label="Notes" multiline minRows={2} {...register('notes')} />
             <Button component="label" variant="outlined">Upload return condition images<input hidden type="file" accept="image/jpeg,image/png" multiple onChange={(event) => setConditionImages(Array.from(event.target.files ?? []))} /></Button>

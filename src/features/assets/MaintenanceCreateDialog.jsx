@@ -13,6 +13,7 @@ export default function MaintenanceCreateDialog({ open, asset, saving, error, on
     enabled: open && Boolean(asset?.id),
     queryFn: async () => (await apiClient.get('/tickets', { params: { asset: asset._id, limit: 100 } })).data.data.items
   });
+  const availableTickets = (ticketsQuery.data ?? []).filter((ticket) => String(ticket.status ?? '').toUpperCase() !== 'CLOSED');
 
   useEffect(() => {
     if (open) {
@@ -32,6 +33,9 @@ export default function MaintenanceCreateDialog({ open, asset, saving, error, on
       }))}>
         <DialogTitle>Log maintenance for {asset?.assetId}</DialogTitle>
         <DialogContent dividers>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Create a ticket first before proceeding to create a maintenance log.
+          </Alert>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             <Controller name="type" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="maintenance-type-label">Maintenance type</InputLabel><Select {...field} labelId="maintenance-type-label" label="Maintenance type">{types.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}</Select></FormControl>} />
@@ -45,7 +49,7 @@ export default function MaintenanceCreateDialog({ open, asset, saving, error, on
             <TextField label="Scheduled date" type="datetime-local" InputLabelProps={{ shrink: true }} {...register('scheduledAt')} />
             <Controller name="warrantyClaim" control={control} render={({ field }) => <FormControlLabel label="Process as a warranty claim" control={<Checkbox checked={Boolean(field.value)} onChange={(_, checked) => field.onChange(checked)} />} />} />
             <TextField label="Warranty claim reference" {...register('warrantyReference')} />
-            <Controller name="relatedTicket" control={control} render={({ field }) => <FormControl fullWidth><InputLabel id="maintenance-ticket-label">Related ticket (optional)</InputLabel><Select {...field} labelId="maintenance-ticket-label" label="Related ticket (optional)"><MenuItem value="">None</MenuItem>{(ticketsQuery.data ?? []).map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select></FormControl>} />
+            <Controller name="relatedTicket" control={control} rules={{ required: 'Select a related ticket before creating a maintenance log' }} render={({ field }) => <FormControl fullWidth error={Boolean(errors.relatedTicket)}><InputLabel id="maintenance-ticket-label">Related ticket</InputLabel><Select {...field} labelId="maintenance-ticket-label" label="Related ticket"><MenuItem value="">Select a ticket</MenuItem>{availableTickets.map((ticket) => <MenuItem key={ticket.id} value={ticket.id}>{ticket.ticketNumber} · {ticket.title}</MenuItem>)}</Select>{errors.relatedTicket && <FormHelperText>{errors.relatedTicket.message}</FormHelperText>}</FormControl>} />
             {asset?.currentCustodian && <FormHelperText>Preventive, repair, and upgrade maintenance entries are allowed while assigned.</FormHelperText>}
           </Stack>
         </DialogContent>

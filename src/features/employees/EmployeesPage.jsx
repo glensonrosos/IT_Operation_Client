@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Add, ArchiveOutlined, Download, EditOutlined, RestoreOutlined, UploadFile, VisibilityOutlined } from '@mui/icons-material';
+import { Add, ArchiveOutlined, DeleteForever, Download, EditOutlined, RestoreOutlined, UploadFile, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
@@ -30,6 +30,7 @@ export default function EmployeesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [confirmEmployee, setConfirmEmployee] = useState(null);
+  const [deleteEmployee, setDeleteEmployee] = useState(null);
   const [notice, setNotice] = useState({ open: false, message: '', severity: 'success' });
   const [fileOperation, setFileOperation] = useState('');
   const [importReport, setImportReport] = useState(null);
@@ -66,6 +67,15 @@ export default function EmployeesPage() {
       setConfirmEmployee(null);
       setNotice({ open: true, message: variables.restore ? 'Employee record restored.' : 'Employee record archived.', severity: 'success' });
     }
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => apiClient.delete(`/employees/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setDeleteEmployee(null);
+      setNotice({ open: true, message: 'Employee permanently deleted.', severity: 'success' });
+    },
+    onError: (error) => setNotice({ open: true, message: errorMessage(error), severity: 'error' })
   });
 
   const handleSort = (field) => {
@@ -249,6 +259,7 @@ export default function EmployeesPage() {
                       {canArchive && (employee.isArchived
                         ? <Button size="small" startIcon={<RestoreOutlined />} onClick={() => archiveMutation.mutate({ id: employee.id, restore: true })}>Restore</Button>
                         : employee.status !== 'ACTIVE' && <Button size="small" color="warning" startIcon={<ArchiveOutlined />} onClick={() => setConfirmEmployee(employee)}>Archive</Button>)}
+                      {user?.role?.key === 'SUPER_IT_ADMIN' && employee.status !== 'ACTIVE' && <Button size="small" color="error" startIcon={<DeleteForever />} onClick={() => setDeleteEmployee(employee)}>Delete</Button>}
                     </Stack></TableCell>
                   </TableRow>
                 ))}
@@ -273,6 +284,11 @@ export default function EmployeesPage() {
         <DialogTitle>Archive employee record?</DialogTitle>
         <DialogContent>{confirmEmployee?.fullName} will be hidden from normal directory results. Historical references will remain.</DialogContent>
         <DialogActions><Button onClick={() => setConfirmEmployee(null)}>Cancel</Button><Button color="warning" onClick={() => archiveMutation.mutate({ id: confirmEmployee.id, restore: false })}>Archive</Button></DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(deleteEmployee)} onClose={() => setDeleteEmployee(null)}>
+        <DialogTitle>Permanently delete employee?</DialogTitle>
+        <DialogContent>{deleteEmployee?.fullName} and the employee photo will be permanently deleted. This action cannot be undone.</DialogContent>
+        <DialogActions><Button onClick={() => setDeleteEmployee(null)}>Cancel</Button><Button color="error" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(deleteEmployee.id)}>Delete permanently</Button></DialogActions>
       </Dialog>
       <Snackbar open={notice.open} autoHideDuration={5000} onClose={() => setNotice((current) => ({ ...current, open: false }))}>
         <Alert severity={notice.severity} onClose={() => setNotice((current) => ({ ...current, open: false }))}>{notice.message}</Alert>

@@ -188,8 +188,9 @@ export default function SparePartsPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>Part number</TableCell>
-                                    <TableCell>Type</TableCell>
+                  <TableCell>Type</TableCell>
                   <TableCell>Model</TableCell>
+                  <TableCell>Description</TableCell>
                   <TableCell>Manufacturer</TableCell>
                   <TableCell>Condition</TableCell>
                   <TableCell>On hand</TableCell>
@@ -200,8 +201,9 @@ export default function SparePartsPage() {
                 {rows.map((part) => (
                   <TableRow key={part.id}>
                     <TableCell>{part.partNumber}</TableCell>
-                                        <TableCell>{part.partType}</TableCell>
+                    <TableCell>{part.partType}</TableCell>
                     <TableCell>{part.model || '—'}</TableCell>
+                    <TableCell sx={{ maxWidth: 280, whiteSpace: 'pre-line' }}>{part.description || '—'}</TableCell>
                     <TableCell>{part.manufacturer || '—'}</TableCell>
                     <TableCell>{part.conditionQuantities?.length ? part.conditionQuantities.join(', ') : part.condition}</TableCell>
                     <TableCell>{part.quantityOnHand}</TableCell>
