@@ -39,7 +39,7 @@ function AssetIdPreview({ asset, onClick }) {
     enabled: hovered,
     queryFn: async () => (await apiClient.get(`/assets/${asset.id}/images`)).data.data.images
   });
-  const image = imageQuery.data?.[0];
+  const image = imageQuery.data?.find((item) => item.isPrimary) ?? imageQuery.data?.[0];
 
   return (
     <>

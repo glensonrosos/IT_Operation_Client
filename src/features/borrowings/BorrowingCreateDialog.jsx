@@ -69,7 +69,13 @@ export default function BorrowingCreateDialog({ open, saving, error, onClose, on
   const borrowableAssets = (assetsQuery.data ?? []).filter((asset) => ['AVAILABLE', 'IN_STOCK'].includes(asset.status) && asset.isBorrowable && !asset.currentCustodian && !asset.currentBorrower);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={(_, reason) => { if (reason !== 'backdropClick') onClose(); }}
+      disableEscapeKeyDown
+      fullWidth
+      maxWidth="sm"
+    >
       <form onSubmit={handleSubmit((values) => onSubmit({
         borrower: values.borrower,
         assets: values.assets.map((asset) => asset.id),

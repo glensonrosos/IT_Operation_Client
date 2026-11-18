@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Add, ArchiveOutlined, DeleteForever, Download, EditOutlined, RestoreOutlined, UploadFile, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
@@ -193,6 +193,11 @@ export default function EmployeesPage() {
   };
   const rows = employeesQuery.data?.items ?? [];
   const pagination = employeesQuery.data?.pagination;
+  useEffect(() => {
+    const pageCount = Math.ceil((pagination?.total ?? 0) / rowsPerPage);
+    if (pageCount === 0 && page !== 0) setPage(0);
+    else if (pageCount > 0 && page >= pageCount) setPage(pageCount - 1);
+  }, [pagination?.total, rowsPerPage, page]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100' }}>

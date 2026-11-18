@@ -31,7 +31,13 @@ export default function AssetFormDialog({ open, asset, types, employees, saving,
   }, [asset, open, reset]);
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog
+      open={open}
+      onClose={(_, reason) => { if (reason !== 'backdropClick') onClose(); }}
+      disableEscapeKeyDown
+      fullWidth
+      maxWidth="md"
+    >
       <form onSubmit={handleSubmit((values) => onSubmit({
         ...values,
         images,

@@ -23,14 +23,14 @@ export default function DirectoryNavigation() {
     queryKey: ['ticket-notification-count'],
     enabled: Boolean(user) && (can(user, 'tickets.view') || can(user, 'tickets.view.assigned')),
     queryFn: async () => (await apiClient.get('/tickets/notification-count')).data.data.count,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => query.state.error ? false : 30_000,
     staleTime: 15_000
   });
   const overdueBorrowingQuery = useQuery({
     queryKey: ['navigation-overdue-borrowings'],
     enabled: Boolean(user) && can(user, 'borrowing.view'),
     queryFn: async () => (await apiClient.get('/borrowings', { params: { page: 1, limit: 1, overdue: 'true' } })).data.data.pagination?.total ?? 0,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => query.state.error ? false : 30_000,
     staleTime: 15_000
   });
   const openMaintenanceQuery = useQuery({
@@ -41,7 +41,7 @@ export default function DirectoryNavigation() {
       const responses = await Promise.all(statuses.map((status) => apiClient.get('/maintenance', { params: { page: 1, limit: 1, status } })));
       return responses.reduce((total, response) => total + (response.data.data.pagination?.total ?? 0), 0);
     },
-    refetchInterval: 30_000,
+    refetchInterval: (query) => query.state.error ? false : 30_000,
     staleTime: 15_000
   });
   const [mobileAnchor, setMobileAnchor] = useState(null);

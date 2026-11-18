@@ -6,7 +6,13 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } }
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error) => error?.response?.status === 429 ? false : failureCount < 2
+    }
+  }
 });
 
 const theme = createTheme({
