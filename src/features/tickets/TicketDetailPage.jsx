@@ -364,7 +364,7 @@ export default function TicketDetailPage() {
           </Paper>
         </Stack>
       </Container>
-      <TicketEditDialog open={editOpen} ticket={ticket} saving={updateMutation.isPending} error={editError} canAssign={can(user, 'tickets.assign')} onClose={() => setEditOpen(false)} onSubmit={(values) => updateMutation.mutate(values)} />
+      <TicketEditDialog open={editOpen} ticket={ticket} saving={updateMutation.isPending} error={editError} canAssign={can(user, 'tickets.assign')} canLinkAssets={can(user, 'assets.view')} onClose={() => setEditOpen(false)} onSubmit={(values) => updateMutation.mutate(values)} />
       <Dialog open={closeOpen} onClose={() => setCloseOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Close ticket</DialogTitle>
         <DialogContent><Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Enter the total IT effort rendered before closing this ticket.</Typography><Stack direction="row" spacing={2}><TextField fullWidth label="Hours rendered" type="number" inputProps={{ min: 0, max: 9999 }} value={closeHours} onChange={(event) => setCloseHours(event.target.value)} /><TextField fullWidth label="Minutes rendered" type="number" inputProps={{ min: 0, max: 59 }} value={closeMinutes} onChange={(event) => setCloseMinutes(event.target.value)} /></Stack></DialogContent>
