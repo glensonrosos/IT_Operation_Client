@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Add, ArchiveOutlined, EditOutlined, ImageNotSupportedOutlined, PersonAddAlt1, RestoreOutlined } from '@mui/icons-material';
+import { Add, ArchiveOutlined, EditOutlined, ImageNotSupportedOutlined, PersonAddAlt1, RestoreOutlined, WarningAmberOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Popper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
@@ -91,7 +91,7 @@ export default function AssetsPage() {
       const images = values.images ?? [];
       const assignTo = values.assignTo;
       const accessories = values.accessories;
-      const body = Object.fromEntries(Object.entries(values).filter(([key]) => !['images', 'accessories'].includes(key) && (!id || key !== 'assetType')));
+      const body = Object.fromEntries(Object.entries(values).filter(([key]) => !['images', 'assignTo', 'accessories'].includes(key) && (!id || key !== 'assetType')));
       const response = id
         ? (Object.keys(body).length ? await apiClient.patch(`/assets/${id}`, body) : { data: { data: { asset: { id } } } })
         : await apiClient.post('/assets', body);
@@ -119,6 +119,11 @@ export default function AssetsPage() {
   const handleSort = (field) => { setSortOrder(sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc'); setSortBy(field); setPage(0); };
   const rows = assetsQuery.data?.items ?? [];
   const pagination = assetsQuery.data?.pagination;
+  const duplicateAssetKeys = new Set(rows.reduce((keys, asset) => {
+    const custodian = asset.currentCustodian ?? asset.currentBorrower;
+    if (custodian && asset.assetName) keys.push(`${custodian.id ?? custodian._id}:${asset.assetName.trim().toLowerCase()}`);
+    return keys;
+  }, []).filter((key, index, keys) => keys.indexOf(key) !== index));
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.100' }}>
@@ -151,9 +156,13 @@ export default function AssetsPage() {
               <TableCell><TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortOrder : 'asc'} onClick={() => handleSort('status')}>Status</TableSortLabel></TableCell>
               <TableCell>Condition</TableCell><TableCell align="right">Actions</TableCell>
             </TableRow></TableHead><TableBody>
-              {assetsQuery.isPending ? <TableRow><TableCell colSpan={8} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>No assets match these filters.</TableCell></TableRow> : rows.map((asset) => <TableRow hover key={asset.id}>
+              {assetsQuery.isPending ? <TableRow><TableCell colSpan={8} align="center"><CircularProgress size={24} sx={{ my: 3 }} /></TableCell></TableRow> : rows.length === 0 ? <TableRow><TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>No assets match these filters.</TableCell></TableRow> : rows.map((asset) => {
+                const custodian = asset.currentCustodian ?? asset.currentBorrower;
+                const duplicateKey = custodian && asset.assetName ? `${custodian.id ?? custodian._id}:${asset.assetName.trim().toLowerCase()}` : null;
+                const possibleDuplicate = duplicateKey && duplicateAssetKeys.has(duplicateKey);
+                return <TableRow hover key={asset.id} sx={possibleDuplicate ? { bgcolor: 'warning.50', borderLeft: 3, borderColor: 'warning.main' } : undefined}>
                 <TableCell><AssetIdPreview asset={asset} onClick={() => navigate(`/assets/${asset.id}`)} /></TableCell>
-                <TableCell><Stack><Typography fontWeight={600}>{asset.assetName}</Typography><Typography variant="body2" color="text.secondary">{asset.brand} {asset.model}</Typography></Stack></TableCell>
+                <TableCell><Stack direction="row" spacing={0.75} alignItems="center">{possibleDuplicate && <Tooltip title="Possible duplicate: same asset name and custodian"><WarningAmberOutlined fontSize="small" color="warning" /></Tooltip>}<Stack><Typography fontWeight={600}>{asset.assetName}</Typography><Typography variant="body2" color="text.secondary">{asset.brand} {asset.model}</Typography></Stack></Stack></TableCell>
                 <TableCell>{asset.serialNumber || asset.serviceTag || '—'}</TableCell>
                 <TableCell>{asset.currentCustodian?.fullName ?? asset.currentBorrower?.fullName ?? '—'}</TableCell>
                 <TableCell>{!asset.currentCustodian && !asset.currentBorrower && asset.status === 'AVAILABLE' ? 'IT' : (asset.department?.departmentName ?? '—')}</TableCell>
@@ -161,7 +170,8 @@ export default function AssetsPage() {
                 <TableCell>{asset.condition}</TableCell>
                 <TableCell align="right">{canArchive && (asset.isArchived ? <Button size="small" startIcon={<RestoreOutlined />} onClick={() => archiveMutation.mutate({ asset, restore: true })}>Restore</Button> : canArchiveAsset(asset) && <Button size="small" color="warning" startIcon={<ArchiveOutlined />} onClick={() => setConfirmArchive(asset)}>Archive</Button>)}</TableCell>
 
-              </TableRow>)}
+              </TableRow>;
+              })}
             </TableBody></Table>
             <TablePagination component="div" count={pagination?.total ?? 0} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }} rowsPerPageOptions={[10, 20, 50, 100]} />
           </TableContainer>
