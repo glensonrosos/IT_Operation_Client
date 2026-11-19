@@ -91,7 +91,7 @@ export default function AssetsPage() {
       const images = values.images ?? [];
       const assignTo = values.assignTo;
       const accessories = values.accessories;
-      const body = Object.fromEntries(Object.entries(values).filter(([key]) => !['images', 'assignTo', 'accessories'].includes(key) && (!id || key !== 'assetType')));
+      const body = Object.fromEntries(Object.entries(values).filter(([key]) => !['images', 'accessories'].includes(key) && (!id || key !== 'assetType')));
       const response = id
         ? (Object.keys(body).length ? await apiClient.patch(`/assets/${id}`, body) : { data: { data: { asset: { id } } } })
         : await apiClient.post('/assets', body);

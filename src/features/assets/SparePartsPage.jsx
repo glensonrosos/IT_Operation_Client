@@ -237,7 +237,7 @@ export default function SparePartsPage() {
             <TextField id="sp-move-type" select label="Movement" value={movementType} onChange={(event) => { setMovementType(event.target.value); setMovementAsset(null); }} SelectProps={{ native: true }}>
               <option value="RECEIVED">Received</option>
               <option value="ISSUED">Issued</option>
-              <option value="ADJUSTED">Adjusted</option>
+              {user?.role?.key === 'SUPER_IT_ADMIN' && <option value="ADJUSTED">Adjusted</option>}
               
               <option value="DAMAGED">Damaged</option>
               <option value="LOST">Lost</option>

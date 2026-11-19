@@ -88,7 +88,7 @@ export default function TicketEditDialog({ open, ticket, saving, error, canAssig
     const isDuplicated = ticket?.status === 'DUPLICATED';
     reset({
       title: ticket?.title ?? '',
-      requester: ticket?.requester?._id ?? ticket?.requester ?? '',
+      requester: ticket?.requester?._id ?? ticket?.requester?.id ?? ticket?.requester ?? '',
       assetReferences: (ticket?.assetReferences ?? []).map((asset) => asset._id ?? asset),
       description: ticket?.description ?? '',
       type: ticket?.type ?? 'INCIDENT',
@@ -122,7 +122,7 @@ export default function TicketEditDialog({ open, ticket, saving, error, canAssig
             {error && <Alert severity="error">{error}</Alert>}
             <Controller name="requester" control={control} rules={{ required: 'Requester is required' }} render={({ field }) => <Autocomplete
               options={employeesQuery.data ?? []}
-              value={(employeesQuery.data ?? []).find((employee) => employee.id === field.value) ?? (ticket?.requester?.id ? ticket.requester : null)}
+              value={(employeesQuery.data ?? []).find((employee) => employee.id === field.value) ?? (ticket?.requester?._id || ticket?.requester?.id ? ticket.requester : null)}
               onChange={(_, employee) => field.onChange(employee?.id ?? '')}
               getOptionLabel={(employee) => `${employee.fullName} - ${employee.employeeId ?? ''}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
