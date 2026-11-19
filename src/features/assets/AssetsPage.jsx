@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Add, ArchiveOutlined, EditOutlined, PersonAddAlt1, RestoreOutlined } from '@mui/icons-material';
+import { Add, ArchiveOutlined, EditOutlined, ImageNotSupportedOutlined, PersonAddAlt1, RestoreOutlined } from '@mui/icons-material';
 import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Popper, Select, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Tooltip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client.js';
@@ -36,7 +36,6 @@ function AssetIdPreview({ asset, onClick }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const imageQuery = useQuery({
     queryKey: ['asset-images', asset.id],
-    enabled: hovered,
     queryFn: async () => (await apiClient.get(`/assets/${asset.id}/images`)).data.data.images
   });
   const image = imageQuery.data?.find((item) => item.isPrimary) ?? imageQuery.data?.[0];
@@ -46,6 +45,7 @@ function AssetIdPreview({ asset, onClick }) {
       <Button size="small" onClick={onClick} onMouseEnter={(event) => { setHovered(true); setAnchorEl(event.currentTarget); }} onMouseLeave={() => { setHovered(false); setAnchorEl(null); }}>
         {asset.assetId}
       </Button>
+      {imageQuery.isSuccess && !image && <Tooltip title="No image uploaded for this asset"><ImageNotSupportedOutlined color="disabled" fontSize="small" aria-label="No image uploaded" /></Tooltip>}
       {image && <Popper open={hovered} anchorEl={anchorEl} placement="right-start" sx={{ zIndex: 1500, pointerEvents: 'none' }}>
         <Box sx={{ p: 1, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, boxShadow: 6 }}>
           <Box component="img" src={`/api/assets/${asset.id}/images/${image._id ?? image.id}`} alt={`${asset.assetId} preview`} sx={{ display: 'block', width: 420, height: 420, objectFit: 'contain', bgcolor: 'grey.100', borderRadius: 1 }} />
